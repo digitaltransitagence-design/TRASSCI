@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Package,
@@ -18,6 +19,7 @@ import {
   MessageSquare,
   ListChecks,
   CalendarDays,
+  LogOut,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import RulesPanel from "@/components/admin/RulesPanel";
@@ -66,6 +68,7 @@ async function patchPackage(id, body) {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const { showToast } = useToast();
   const [role, setRole] = useState("SUPER_ADMIN");
   const [tab, setTab] = useState("dispatch");
@@ -521,10 +524,25 @@ export default function AdminDashboard() {
             </>
           )}
         </nav>
-        <div className="border-t border-slate-800 p-4 text-center text-xs text-slate-500">
-          <Link href="/" className="text-blue-300 hover:underline">
+        <div className="space-y-3 border-t border-slate-800 p-4 text-center text-xs text-slate-500">
+          <Link href="/" className="block text-blue-300 hover:underline">
             Site public
           </Link>
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                sessionStorage.removeItem("trass_admin_secret");
+              } catch {
+                /* ignore */
+              }
+              router.replace("/admin/login");
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-slate-400 transition hover:bg-slate-800 hover:text-orange-400"
+          >
+            <LogOut className="h-4 w-4" />
+            Déconnexion admin
+          </button>
         </div>
       </aside>
 

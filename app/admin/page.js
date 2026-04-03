@@ -1,3 +1,4 @@
+import AdminGate from "@/components/admin/AdminGate";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
 export const metadata = {
@@ -7,5 +8,9 @@ export const metadata = {
 };
 
 export default function AdminPage() {
-  return <AdminDashboard />;
+  return (
+    <AdminGate>
+      <AdminDashboard />
+    </AdminGate>
+  );
 }

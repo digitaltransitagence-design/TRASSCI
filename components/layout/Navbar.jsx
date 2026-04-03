@@ -7,7 +7,6 @@ import { Package } from "lucide-react";
 const navLinks = [
   { href: "/", label: "Accueil" },
   { href: "/client", label: "Mon espace" },
-  { href: "/admin", label: "Portail Pro" },
 ];
 
 /**
@@ -44,9 +43,7 @@ export default function Navbar() {
                 href={href}
                 className={`rounded-xl px-3 py-2 text-sm font-bold transition-colors sm:px-4 ${
                   active
-                    ? href === "/admin"
-                      ? "bg-slate-900 text-white shadow-md"
-                      : "bg-blue-50 text-blue-900 shadow-sm"
+                    ? "bg-blue-50 text-blue-900 shadow-sm"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >

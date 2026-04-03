@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,6 +15,7 @@ import {
   Building2,
   AlertCircle,
   Sparkles,
+  X,
 } from "lucide-react";
 import { STATUS_FLOW, PACKAGE_STATUSES } from "@/lib/constants";
 import Button from "@/components/ui/Button";
@@ -107,7 +108,16 @@ export default function ShippingCalendarPanel({
   const [dateField, setDateField] = useState("created_at");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
-  const [selectedKey, setSelectedKey] = useState(null);
+  const [modalKey, setModalKey] = useState(null);
+
+  useEffect(() => {
+    if (!modalKey) return;
+    function onEsc(e) {
+      if (e.key === "Escape") setModalKey(null);
+    }
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, [modalKey]);
 
   const partnerById = useMemo(
     () => Object.fromEntries((partners || []).map((x) => [x.id, x])),
@@ -204,12 +214,12 @@ export default function ShippingCalendarPanel({
     return { inMonth, delivered, active, incidents };
   }, [filtered, year, month, dateField]);
 
-  const selectedPkgs = selectedKey ? byDay.get(selectedKey) || [] : [];
+  const modalPkgs = modalKey ? byDay.get(modalKey) || [] : [];
 
   const goToday = useCallback(() => {
     const n = new Date();
     setCursor(n);
-    setSelectedKey(dayKeyFromDate(n));
+    setModalKey(dayKeyFromDate(n));
   }, []);
 
   const prevMonth = () => setCursor(new Date(year, month - 1, 1));
@@ -277,7 +287,7 @@ export default function ShippingCalendarPanel({
                 value={dateField}
                 onChange={(e) => {
                   setDateField(e.target.value);
-                  setSelectedKey(null);
+                  setModalKey(null);
                 }}
               >
                 <option value="created_at">Date de création du colis</option>
@@ -397,7 +407,7 @@ export default function ShippingCalendarPanel({
                     );
                   }
                   const count = cell.pkgs.length;
-                  const active = selectedKey === cell.key;
+                  const isOpen = modalKey === cell.key;
                   const isToday = cell.key === todayKey;
                   const statuses = [...new Set(cell.pkgs.map((p) => p.status))].slice(0, 5);
 
@@ -405,9 +415,9 @@ export default function ShippingCalendarPanel({
                     <button
                       key={cell.key}
                       type="button"
-                      onClick={() => setSelectedKey(cell.key === selectedKey ? null : cell.key)}
+                      onClick={() => setModalKey(cell.key)}
                       className={`flex min-h-[88px] flex-col items-stretch rounded-lg border p-1.5 text-left transition sm:min-h-[96px] ${
-                        active
+                        isOpen
                           ? "border-orange-500 bg-orange-50 ring-2 ring-orange-300/60"
                           : isToday
                             ? "border-blue-300 bg-blue-50/70 hover:border-blue-400"
@@ -456,15 +466,15 @@ export default function ShippingCalendarPanel({
         <div className="grid gap-3 lg:grid-cols-7">
           {weekDays.map((wd) => {
             const pkgs = byDay.get(wd.key) || [];
-            const active = selectedKey === wd.key;
+            const isOpen = modalKey === wd.key;
             const isToday = wd.key === todayKey;
             return (
               <button
                 key={wd.key}
                 type="button"
-                onClick={() => setSelectedKey(wd.key === selectedKey ? null : wd.key)}
+                onClick={() => setModalKey(wd.key)}
                 className={`flex min-h-[220px] flex-col rounded-2xl border p-3 text-left transition ${
-                  active
+                  isOpen
                     ? "border-orange-500 bg-orange-50 ring-2 ring-orange-200"
                     : isToday
                       ? "border-blue-300 bg-blue-50/50 hover:border-blue-400"
@@ -508,99 +518,140 @@ export default function ShippingCalendarPanel({
         </div>
       )}
 
-      {/* Détail jour sélectionné */}
-      {selectedKey && (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 shadow-inner">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h4 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-              <Sparkles className="h-5 w-5 text-orange-500" />
-              {new Date(selectedKey + "T12:00:00").toLocaleDateString("fr-FR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </h4>
-            <span className="text-xs text-slate-500">
-              {selectedPkgs.length} colis — {dateField === "updated_at" ? "activité" : "création"}
-            </span>
-          </div>
-          <ul className="space-y-3">
-            {selectedPkgs
-              .slice()
-              .sort((a, b) => {
-                const ta = parsePkgDate(dateField === "updated_at" ? a.updated_at : a.created_at);
-                const tb = parsePkgDate(dateField === "updated_at" ? b.updated_at : b.created_at);
-                return (tb?.getTime() || 0) - (ta?.getTime() || 0);
-              })
-              .map((p) => {
-                const st = STATUS_MAP[p.status];
-                const when = parsePkgDate(dateField === "updated_at" ? p.updated_at : p.created_at);
-                const partner = p.partner_id ? partnerById[p.partner_id] : null;
-                const coursier = p.coursier_id ? coursierById[p.coursier_id] : null;
-                return (
-                  <li
-                    key={p.id}
-                    className="rounded-xl border border-white bg-white p-4 text-sm shadow-sm transition hover:shadow-md"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Package className="h-4 w-4 shrink-0 text-orange-600" />
-                        <span className="font-mono font-bold text-blue-900">{p.id}</span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st?.color || "bg-slate-100 text-slate-700"}`}
+      {/* Modale détail jour */}
+      {modalKey && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="calendar-day-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setModalKey(null);
+          }}
+        >
+          <div className="max-h-[min(90vh,720px)] w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-orange-50 to-amber-50 px-5 py-4">
+              <div>
+                <h4
+                  id="calendar-day-title"
+                  className="flex items-center gap-2 text-lg font-bold text-slate-900"
+                >
+                  <Sparkles className="h-5 w-5 text-orange-500" />
+                  {new Date(modalKey + "T12:00:00").toLocaleDateString("fr-FR", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </h4>
+                <p className="mt-1 text-xs text-slate-600">
+                  {modalPkgs.length} colis — référence :{" "}
+                  {dateField === "updated_at" ? "dernière activité" : "création"}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50"
+                onClick={() => setModalKey(null)}
+                aria-label="Fermer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-[min(70vh,600px)] overflow-y-auto p-5">
+              {modalPkgs.length === 0 ? (
+                <p className="text-center text-sm text-slate-500">Aucun colis ce jour (filtres).</p>
+              ) : (
+                <ul className="space-y-3">
+                  {modalPkgs
+                    .slice()
+                    .sort((a, b) => {
+                      const ta = parsePkgDate(
+                        dateField === "updated_at" ? a.updated_at : a.created_at
+                      );
+                      const tb = parsePkgDate(
+                        dateField === "updated_at" ? b.updated_at : b.created_at
+                      );
+                      return (tb?.getTime() || 0) - (ta?.getTime() || 0);
+                    })
+                    .map((p) => {
+                      const st = STATUS_MAP[p.status];
+                      const when = parsePkgDate(
+                        dateField === "updated_at" ? p.updated_at : p.created_at
+                      );
+                      const partner = p.partner_id ? partnerById[p.partner_id] : null;
+                      const coursier = p.coursier_id ? coursierById[p.coursier_id] : null;
+                      return (
+                        <li
+                          key={p.id}
+                          className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 text-sm shadow-sm"
                         >
-                          {st?.label || p.status}
-                        </span>
-                      </div>
-                      {when && (
-                        <span className="text-xs text-slate-500">
-                          {when.toLocaleTimeString("fr-FR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      <p className="flex items-start gap-1.5 text-slate-700">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                        <span>{p.destination}</span>
-                      </p>
-                      <p className="flex items-start gap-1.5 text-slate-700">
-                        <User className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                        <span>
-                          {p.receiver_name || "—"} · {p.receiver_phone}
-                        </span>
-                      </p>
-                      {partner && (
-                        <p className="flex items-start gap-1.5 text-slate-600">
-                          <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                          Partenaire : {partner.name}
-                        </p>
-                      )}
-                      {coursier && (
-                        <p className="flex items-start gap-1.5 text-slate-600">
-                          <Truck className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                          Coursier : {coursier.name}
-                        </p>
-                      )}
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                      <span>
-                        Prix : <strong className="text-slate-800">{p.price ?? "—"} FCFA</strong>
-                      </span>
-                      {p.issue && (
-                        <span className="flex items-center gap-1 text-amber-800">
-                          <AlertCircle className="h-3.5 w-3.5" />
-                          {p.issue}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-          </ul>
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Package className="h-4 w-4 shrink-0 text-orange-600" />
+                              <span className="font-mono font-bold text-blue-900">{p.id}</span>
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${st?.color || "bg-slate-100 text-slate-700"}`}
+                              >
+                                {st?.label || p.status}
+                              </span>
+                            </div>
+                            {when && (
+                              <span className="text-xs text-slate-500">
+                                {when.toLocaleTimeString("fr-FR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            <p className="flex items-start gap-1.5 text-slate-700">
+                              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                              <span>{p.destination}</span>
+                            </p>
+                            <p className="flex items-start gap-1.5 text-slate-700">
+                              <User className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                              <span>
+                                {p.receiver_name || "—"} · {p.receiver_phone}
+                              </span>
+                            </p>
+                            <p className="flex items-start gap-1.5 text-slate-600 sm:col-span-2">
+                              <User className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                              Expéditeur : {p.sender_name} · {p.sender_phone}
+                            </p>
+                            {partner && (
+                              <p className="flex items-start gap-1.5 text-slate-600">
+                                <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                                Partenaire : {partner.name}
+                              </p>
+                            )}
+                            {coursier && (
+                              <p className="flex items-start gap-1.5 text-slate-600">
+                                <Truck className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                                Coursier : {coursier.name}
+                              </p>
+                            )}
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                            <span>
+                              Prix : <strong className="text-slate-800">{p.price ?? "—"} FCFA</strong>
+                            </span>
+                            <span>Mode : {p.delivery_mode || "—"}</span>
+                            {p.issue && (
+                              <span className="flex items-center gap-1 text-amber-800">
+                                <AlertCircle className="h-3.5 w-3.5" />
+                                {p.issue}
+                              </span>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

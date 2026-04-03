@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { updateRecords, isInsforgeConfigured } from "@/lib/insforge";
+import { updateRecords, deleteRecords, isInsforgeConfigured } from "@/lib/insforge";
 
 /** Mise à jour partenaire (conditions, WhatsApp, adresse, contact). */
 export async function PATCH(request, { params }) {
@@ -28,6 +28,27 @@ export async function PATCH(request, { params }) {
       `id=eq.${encodeURIComponent(decodeURIComponent(id))}`,
       patch
     );
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json(
+      { error: e.message || "Erreur" },
+      { status: 500 }
+    );
+  }
+}
+
+/** Suppression partenaire (colis : partner_id passé à NULL si FK ON DELETE SET NULL). */
+export async function DELETE(request, { params }) {
+  const denied = requireAdmin(request);
+  if (denied) return denied;
+  if (!isInsforgeConfigured()) {
+    return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });
+  }
+  const { id } = await params;
+  const raw = decodeURIComponent(id);
+  try {
+    await deleteRecords("partners", `id=eq.${encodeURIComponent(raw)}`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);

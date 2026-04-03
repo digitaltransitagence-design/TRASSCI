@@ -28,6 +28,7 @@ import MessagesPanel from "@/components/admin/MessagesPanel";
 import DeliveryStatusPanel from "@/components/admin/DeliveryStatusPanel";
 import ShippingCalendarPanel from "@/components/admin/ShippingCalendarPanel";
 import CoursiersAdminPanel from "@/components/admin/CoursiersAdminPanel";
+import AdminSecretBanner from "@/components/admin/AdminSecretBanner";
 import { useToast } from "@/components/providers/ToastProvider";
 
 const STORAGE_ROLE = "trass_admin_role";
@@ -146,6 +147,13 @@ export default function AdminDashboard() {
     revenue: packages.reduce((a, p) => a + (p.price || 0), 0),
     pending: packages.filter((p) => p.status === "PENDING").length,
     incidents: packages.filter((p) => p.issue).length,
+    delivered: packages.filter((p) => p.status === "DELIVERED").length,
+    inFlight: packages.filter((p) =>
+      ["PICKING_UP", "AT_HUB", "AT_STATION", "IN_TRANSIT", "READY_FOR_PICKUP"].includes(p.status)
+    ).length,
+    partnersActive: partners.filter((x) => x.active).length,
+    partnersTotal: partners.length,
+    coursiersTotal: coursiers.length,
   };
 
   async function handleTrafficInsight(pkg) {
@@ -581,6 +589,15 @@ export default function AdminDashboard() {
           )}
         </header>
 
+        {role === "SUPER_ADMIN" && (
+          <div className="border-b border-slate-200 bg-white px-6 py-4">
+            <AdminSecretBanner
+              onMemorized={refresh}
+              successHint="Ce code s’applique aux actions sensibles : règles & tarifs, partenaires, notes internes, coursiers."
+            />
+          </div>
+        )}
+
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">
           {apiDown && (
             <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
@@ -618,9 +635,73 @@ export default function AdminDashboard() {
 
           {role === "SUPER_ADMIN" && tab === "admin_overview" && (
             <div className="mx-auto max-w-5xl animate-fade-in">
-              <p className="mb-8 text-slate-600">
-                Accès rapide aux modules de gestion Trass CI.
+              <p className="mb-6 text-slate-600">
+                Tableau général — chiffres colis, CA, file logistique et réseau partenaires /
+                coursiers.
               </p>
+
+              <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                    Chiffre d&apos;affaires (prix enregistrés)
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-emerald-700">
+                    {stats.revenue.toLocaleString("fr-FR")}{" "}
+                    <span className="text-base font-bold text-slate-600">FCFA</span>
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                    Colis total
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">{stats.total}</p>
+                </div>
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-blue-700">
+                    En logistique active
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-blue-900">{stats.inFlight}</p>
+                  <p className="text-xs text-blue-800/80">hors livré / annulé</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                    Livrés
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-emerald-900">{stats.delivered}</p>
+                </div>
+                <div className="rounded-2xl border border-orange-100 bg-orange-50/50 p-5 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-orange-800">
+                    En attente saisie
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-orange-900">{stats.pending}</p>
+                </div>
+                <div className="rounded-2xl border border-red-100 bg-red-50/50 p-5 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-red-700">
+                    Incidents
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-red-800">{stats.incidents}</p>
+                </div>
+                <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-5 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-violet-800">
+                    Partenaires actifs
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-violet-900">
+                    {stats.partnersActive}
+                    <span className="text-sm font-semibold text-violet-700">
+                      {" "}
+                      / {stats.partnersTotal}
+                    </span>
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-5 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-800">
+                    Coursiers
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-indigo-900">{stats.coursiersTotal}</p>
+                </div>
+              </div>
+
+              <p className="mb-4 text-sm font-bold text-slate-700">Accès rapide aux modules</p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {[
                   {
@@ -685,24 +766,12 @@ export default function AdminDashboard() {
                   </button>
                 ))}
               </div>
-              <div className="mt-10 grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:grid-cols-3">
-                <div>
-                  <p className="text-xs font-bold uppercase text-slate-500">Colis total</p>
-                  <p className="text-2xl font-extrabold text-slate-800">{stats.total}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-slate-500">En attente</p>
-                  <p className="text-2xl font-extrabold text-orange-600">{stats.pending}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-slate-500">Incidents</p>
-                  <p className="text-2xl font-extrabold text-red-600">{stats.incidents}</p>
-                </div>
-              </div>
             </div>
           )}
 
-          {role === "SUPER_ADMIN" && tab === "partners_admin" && <PartnersAdminPanel />}
+          {role === "SUPER_ADMIN" && tab === "partners_admin" && (
+            <PartnersAdminPanel onChanged={refresh} />
+          )}
 
           {role === "SUPER_ADMIN" && tab === "coursiers_admin" && (
             <CoursiersAdminPanel onChanged={refresh} />

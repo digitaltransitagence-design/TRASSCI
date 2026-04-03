@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
-import AdminSecretBanner from "@/components/admin/AdminSecretBanner";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/providers/ToastProvider";
 
@@ -102,11 +101,6 @@ export default function MessagesPanel({ packages = [] }) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 animate-fade-in">
-      <AdminSecretBanner
-        onMemorized={load}
-        successHint="Les notes sont stockées dans la table admin_notes sur Insforge — vous pouvez en ajouter ci-dessous."
-      />
-
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-2 flex items-center gap-2 text-lg font-extrabold text-slate-800">
           <MessageSquare className="h-6 w-6 text-blue-600" />

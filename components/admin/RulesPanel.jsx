@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
-import AdminSecretBanner from "@/components/admin/AdminSecretBanner";
 import { useToast } from "@/components/providers/ToastProvider";
 
 function adminHeaders() {
@@ -116,14 +115,6 @@ export default function RulesPanel() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-10 animate-fade-in">
-      <AdminSecretBanner
-        onMemorized={() => {
-          load();
-          loadPartners();
-        }}
-        successHint="Vous pouvez modifier les tarifs et partenaires ci-dessous."
-      />
-
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-4 text-lg font-extrabold text-slate-800">Frais fixes</h3>
         <div className="grid gap-4 md:grid-cols-3">

@@ -41,18 +41,19 @@ export async function POST(request) {
     console.error(e);
     const msg = String(e?.message || e || "");
 
-    /* Resend (compte sans domaine vérifié) : envois de test limités à l’e-mail du compte. */
+    /* Resend (sans domaine vérifié) : envois de test limités — détail côté serveur uniquement. */
     if (
       /only send testing emails|verify a domain|testing emails to your own/i.test(
         msg
       )
     ) {
+      console.warn("[guide-email] Limite Resend (domaine / destinataire) :", msg);
       return NextResponse.json({
         ok: true,
         mode: "stub",
         reason: "resend_sandbox",
         message:
-          "Resend (mode test) : sans domaine vérifié, l’envoi ne peut aller qu’à l’adresse du compte Resend — ou vérifiez un domaine sur resend.com/domains et définissez RESEND_FROM avec une adresse @ce-domaine.",
+          "Nous n’avons pas pu envoyer l’e-mail sur votre boîte pour le moment. Le guide est disponible ci-dessous sur cette page.",
         guide: getClientGuidePlainText(),
       });
     }

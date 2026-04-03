@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { LogIn, Mail, Package, Sparkles } from "lucide-react";
+import { Download, LogIn, Mail, Package, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { useToast } from "@/components/providers/ToastProvider";
@@ -157,10 +157,11 @@ export default function ClientLanding() {
       }
       if (j.mode === "stub" && j.guide) {
         showToast(
-          j.reason === "resend_sandbox" && j.message
-            ? j.message
-            : "Copiez le guide affiché ci-dessous (e-mail non configuré).",
-          j.reason === "resend_sandbox" ? "error" : "success"
+          j.message ||
+            (j.reason === "resend_sandbox"
+              ? "Le guide est disponible ci-dessous sur cette page."
+              : "Copiez le guide affiché ci-dessous (e-mail non configuré)."),
+          "success"
         );
       } else {
         showToast("Guide envoyé sur votre boîte e-mail.", "success");
@@ -218,18 +219,31 @@ export default function ClientLanding() {
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 text-left">
               <p className="mb-2 text-sm font-bold text-slate-800">
-                Recevoir le guide « comment remplir le formulaire » par e-mail
+                Guide « comment remplir le formulaire »
               </p>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={guideSending}
-                onClick={sendGuideEmail}
-                className="w-full sm:w-auto"
-              >
-                <Mail className="h-4 w-4" aria-hidden />
-                {guideSending ? "Envoi…" : "M'envoyer le guide"}
-              </Button>
+              <p className="mb-3 text-xs text-slate-600">
+                Recevoir par e-mail ou télécharger le fichier texte (même contenu).
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={guideSending}
+                  onClick={sendGuideEmail}
+                  className="w-full sm:w-auto"
+                >
+                  <Mail className="h-4 w-4" aria-hidden />
+                  {guideSending ? "Envoi…" : "M'envoyer le guide"}
+                </Button>
+                <a
+                  href="/api/client/guide"
+                  download="trass-ci-guide-formulaire-envoi.txt"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-6 py-3 text-center text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50 sm:w-auto"
+                >
+                  <Download className="h-4 w-4 shrink-0" aria-hidden />
+                  Télécharger (.txt)
+                </a>
+              </div>
             </div>
           </div>
         ) : (
@@ -399,10 +413,19 @@ export default function ClientLanding() {
             <li key={line}>{line}</li>
           ))}
         </ul>
-        <p className="mt-4 text-sm text-slate-500">
-          Connectez-vous pour pouvoir recevoir ce récapitulatif par e-mail (si l&apos;envoi est
-          configuré côté serveur).
-        </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <a
+            href="/api/client/guide"
+            download="trass-ci-guide-formulaire-envoi.txt"
+            className="inline-flex w-fit items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/30 transition-colors hover:bg-orange-600"
+          >
+            <Download className="h-4 w-4 shrink-0" aria-hidden />
+            Télécharger le guide complet (.txt)
+          </a>
+          <p className="text-sm text-slate-500">
+            Connectez-vous pour recevoir aussi ce récapitulatif par e-mail.
+          </p>
+        </div>
       </section>
     </div>
   );

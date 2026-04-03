@@ -39,3 +39,17 @@ body {
 .animate-fade-in {
   animation: fade-in 0.35s ease-out;
 }
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float {
+  animation: float-soft 4s ease-in-out infinite;
+}

@@ -11,6 +11,7 @@ import {
 import { LandingTrackForm } from "@/components/landing/LandingTrackForm";
 import NotificationShowcase from "@/components/landing/NotificationShowcase";
 import AbidjanInteriorStrip from "@/components/landing/AbidjanInteriorStrip";
+import HeroFloatingNotification from "@/components/landing/HeroFloatingNotification";
 
 export const metadata = {
   title: "Trass CI — Expédiez sans stress | Abidjan → Intérieur",
@@ -48,6 +49,7 @@ export default function Home() {
               — du ramassage à la remise en gare chez le destinataire.
             </p>
             <LandingTrackForm />
+            <HeroFloatingNotification inline />
             <div className="mt-8 flex flex-wrap items-center gap-6 text-sm font-medium text-blue-200">
               <span className="flex items-center gap-2">
                 <Check className="h-5 w-5 text-green-400" />
@@ -63,7 +65,7 @@ export default function Home() {
               </span>
             </div>
           </div>
-          <div className="relative hidden lg:block">
+          <div className="relative hidden min-h-[280px] lg:block">
             <div className="absolute inset-0 rounded-full bg-blue-500 opacity-20 blur-[100px]" />
             <div className="relative rotate-2 rounded-3xl border border-white/20 bg-white/10 p-2 backdrop-blur-md transition-transform duration-500 hover:rotate-0">
               <img
@@ -73,6 +75,7 @@ export default function Home() {
                 width={800}
                 height={600}
               />
+              <HeroFloatingNotification />
             </div>
           </div>
         </div>

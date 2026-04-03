@@ -12,7 +12,10 @@ const MAX_PHOTO_CHARS = 2_500_000;
 export async function GET(request) {
   if (!isInsforgeConfigured()) {
     return NextResponse.json(
-      { error: "Insforge non configuré (INSFORGE_API_URL, INSFORGE_ANON_KEY)" },
+      {
+        error:
+          "Insforge non configuré (INSFORGE_API_URL, INSFORGE_API_KEY = clé « API Key » ik_ du dashboard)",
+      },
       { status: 503 }
     );
   }
@@ -40,7 +43,10 @@ export async function GET(request) {
 export async function POST(request) {
   if (!isInsforgeConfigured()) {
     return NextResponse.json(
-      { error: "Insforge non configuré" },
+      {
+        error:
+          "Insforge non configuré (INSFORGE_API_URL, INSFORGE_API_KEY = clé « API Key » ik_ du dashboard)",
+      },
       { status: 503 }
     );
   }

@@ -1,0 +1,29 @@
+# Déploiement production Vercel depuis GitHub (sans dépendre uniquement de l’intégration Git Vercel).
+# À configurer : secrets du dépôt GitHub → Settings → Secrets and variables → Actions
+#   VERCEL_TOKEN      : https://vercel.com/account/tokens
+#   VERCEL_ORG_ID     : fichier .vercel/project.json après `vercel link` (team / user id)
+#   VERCEL_PROJECT_ID : idem
+#
+# Si ces secrets sont absents, le job est ignoré (aucune erreur).
+name: Deploy — Vercel (production)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: ${{ secrets.VERCEL_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: "--prod"
+          working-directory: ./

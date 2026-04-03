@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, startTransition } from "react";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/providers/ToastProvider";
 
@@ -23,8 +23,10 @@ export default function AdminSecretBanner({ onMemorized, successHint }) {
   useEffect(() => {
     try {
       const s = sessionStorage.getItem("trass_admin_secret") || "";
-      setAdminSecretInput(s);
-      setHasStoredSecret(Boolean(s.trim()));
+      startTransition(() => {
+        setAdminSecretInput(s);
+        setHasStoredSecret(Boolean(s.trim()));
+      });
     } catch {
       /* ignore */
     }

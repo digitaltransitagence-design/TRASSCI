@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
+import AdminSecretBanner from "@/components/admin/AdminSecretBanner";
 import { useToast } from "@/components/providers/ToastProvider";
 
 function adminHeaders() {
@@ -14,7 +15,6 @@ export default function PartnersAdminPanel() {
   const { showToast } = useToast();
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [adminSecretInput, setAdminSecretInput] = useState("");
   const [editingPartner, setEditingPartner] = useState(null);
 
   const loadPartners = useCallback(async () => {
@@ -37,22 +37,8 @@ export default function PartnersAdminPanel() {
   }, [showToast]);
 
   useEffect(() => {
-    try {
-      setAdminSecretInput(sessionStorage.getItem("trass_admin_secret") || "");
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  useEffect(() => {
     loadPartners();
   }, [loadPartners]);
-
-  function saveSecret() {
-    sessionStorage.setItem("trass_admin_secret", adminSecretInput.trim());
-    showToast("Code enregistré pour cette session.", "success");
-    loadPartners();
-  }
 
   async function savePartner(p) {
     try {
@@ -82,29 +68,16 @@ export default function PartnersAdminPanel() {
     }
   }
 
-  if (loading) {
-    return <p className="text-slate-600">Chargement des partenaires…</p>;
-  }
-
   return (
     <div className="mx-auto max-w-4xl space-y-8 animate-fade-in">
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-        <strong>Code admin :</strong> requis si{" "}
-        <code className="rounded bg-white px-1">ADMIN_SECRET</code> est défini sur le serveur.
-        <div className="mt-3 flex flex-wrap gap-2">
-          <input
-            type="password"
-            className="min-w-[200px] flex-1 rounded-lg border border-amber-300 px-3 py-2"
-            placeholder="Code secret admin"
-            value={adminSecretInput}
-            onChange={(e) => setAdminSecretInput(e.target.value)}
-          />
-          <Button type="button" variant="outline" onClick={saveSecret}>
-            Mémoriser
-          </Button>
-        </div>
-      </div>
+      <AdminSecretBanner
+        onMemorized={loadPartners}
+        successHint="Vous pouvez modifier les partenaires ci-dessous."
+      />
 
+      {loading ? (
+        <p className="text-slate-600">Chargement des partenaires…</p>
+      ) : (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-2 text-lg font-extrabold text-slate-800">Partenaires</h3>
         <p className="mb-6 text-sm text-slate-600">
@@ -204,6 +177,7 @@ export default function PartnersAdminPanel() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

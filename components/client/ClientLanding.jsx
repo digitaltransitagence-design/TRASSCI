@@ -33,6 +33,7 @@ export default function ClientLanding() {
   const { data: session, status } = useSession();
   const { showToast } = useToast();
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [authStatusLoaded, setAuthStatusLoaded] = useState(false);
   const [resendEnabled, setResendEnabled] = useState(false);
   const [tab, setTab] = useState("login");
   const [loading, setLoading] = useState(false);
@@ -54,8 +55,25 @@ export default function ClientLanding() {
       .catch(() => {
         setGoogleEnabled(false);
         setResendEnabled(false);
-      });
+      })
+      .finally(() => setAuthStatusLoaded(true));
   }, []);
+
+  useEffect(() => {
+    const err = searchParams.get("error");
+    if (!err) return;
+    const messages = {
+      TableClient:
+        "Base « client » non prête — exécutez sql/migration_v5_client_auth.sql sur Insforge.",
+      AccessDenied: "Connexion annulée.",
+      OAuthSignin: "Erreur OAuth — vérifiez GOOGLE_CLIENT_ID / SECRET et l’URI de redirection Google.",
+      OAuthCallback:
+        "Erreur après Google — l’URI autorisée doit être : {votre-site}/api/auth/callback/google",
+      OAuthCreateAccount: "Impossible de créer le compte.",
+      Configuration: "Vérifiez NEXTAUTH_SECRET et NEXTAUTH_URL sur le serveur.",
+    };
+    showToast(messages[err] || `Erreur de connexion : ${err}`, "error");
+  }, [searchParams, showToast]);
 
   const onGoogle = useCallback(async () => {
     setLoading(true);
@@ -237,7 +255,19 @@ export default function ClientLanding() {
           </div>
         ) : (
           <>
-            {googleEnabled && (
+            <div className="mb-4 text-center">
+              <p className="text-sm font-semibold text-slate-800">Connexion avec Google</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Première utilisation : un compte est créé automatiquement avec votre adresse Google.
+              </p>
+            </div>
+
+            {!authStatusLoaded ? (
+              <div
+                className="mb-6 h-12 w-full animate-pulse rounded-xl bg-slate-100"
+                aria-hidden
+              />
+            ) : googleEnabled ? (
               <>
                 <Button
                   type="button"
@@ -274,6 +304,27 @@ export default function ClientLanding() {
                   </div>
                 </div>
               </>
+            ) : (
+              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-left text-sm text-amber-950">
+                <p className="font-semibold">Google n&apos;est pas activé côté serveur</p>
+                <p className="mt-2 leading-relaxed text-amber-900/95">
+                  Ajoutez les variables{" "}
+                  <code className="rounded bg-white px-1 py-0.5 text-xs">GOOGLE_CLIENT_ID</code> et{" "}
+                  <code className="rounded bg-white px-1 py-0.5 text-xs">GOOGLE_CLIENT_SECRET</code>{" "}
+                  (Google Cloud Console → OAuth 2.0), plus{" "}
+                  <code className="rounded bg-white px-1 py-0.5 text-xs">NEXTAUTH_URL</code> et{" "}
+                  <code className="rounded bg-white px-1 py-0.5 text-xs">NEXTAUTH_SECRET</code>, dans
+                  Vercel ou <code className="text-xs">.env.local</code>, puis redéployez.
+                </p>
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center" aria-hidden>
+                    <div className="w-full border-t border-amber-200/80" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-amber-50 px-2 text-amber-800/80">ou</span>
+                  </div>
+                </div>
+              </div>
             )}
 
             <div className="mb-4 flex gap-2 rounded-xl bg-slate-100 p-1">

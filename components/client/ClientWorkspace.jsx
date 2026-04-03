@@ -82,25 +82,6 @@ export default function ClientWorkspace() {
   const initialTrack = searchParams.get("track") || "";
   const { showToast } = useToast();
 
-  useEffect(() => {
-    if (status !== "unauthenticated") return;
-    const path = typeof window !== "undefined" ? window.location.pathname : "";
-    const search = typeof window !== "undefined" ? window.location.search : "";
-    const next = encodeURIComponent(`${path}${search}`);
-    router.replace(`/client?next=${next}`);
-  }, [status, router]);
-
-  if (status === "loading") {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-slate-600">
-        Vérification de la session…
-      </div>
-    );
-  }
-  if (!session) {
-    return null;
-  }
-
   const [pricing, setPricing] = useState(null);
   const [apiDown, setApiDown] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTrack ? "track" : "send");
@@ -127,6 +108,15 @@ export default function ClientWorkspace() {
   const [packingTips, setPackingTips] = useState([]);
 
   useEffect(() => {
+    if (status !== "unauthenticated") return;
+    const path = typeof window !== "undefined" ? window.location.pathname : "";
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    const next = encodeURIComponent(`${path}${search}`);
+    router.replace(`/client?next=${next}`);
+  }, [status, router]);
+
+  useEffect(() => {
+    if (!session) return;
     fetch("/api/pricing", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
@@ -146,7 +136,7 @@ export default function ClientWorkspace() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [session]);
 
   const loadTrack = useCallback(
     async (id) => {
@@ -181,11 +171,32 @@ export default function ClientWorkspace() {
   );
 
   useEffect(() => {
-    if (initialTrack) {
-      setTrackId(initialTrack);
-      loadTrack(initialTrack);
-    }
-  }, [initialTrack, loadTrack]);
+    if (!session || !initialTrack) return;
+    setTrackId(initialTrack);
+    loadTrack(initialTrack);
+  }, [initialTrack, loadTrack, session]);
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-slate-600">
+        Vérification de la session…
+      </div>
+    );
+  }
+  if (!session) {
+    return (
+      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 px-4 text-center text-slate-600">
+        <p>Redirection vers la connexion…</p>
+        <p className="text-sm text-slate-500">
+          Si rien ne se passe, ouvrez{" "}
+          <Link href="/client" className="font-medium text-blue-700 underline">
+            Mon espace
+          </Link>
+          .
+        </p>
+      </div>
+    );
+  }
 
   function destinationLabel(slug) {
     const d = pricing?.destinations?.find(

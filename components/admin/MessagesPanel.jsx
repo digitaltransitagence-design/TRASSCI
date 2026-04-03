@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
+import AdminSecretBanner from "@/components/admin/AdminSecretBanner";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/providers/ToastProvider";
 
@@ -27,11 +28,25 @@ export default function MessagesPanel({ packages = [] }) {
         setNotes([]);
         return;
       }
-      if (!res.ok) throw new Error();
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = typeof data.error === "string" ? data.error : "";
+        if (res.status === 500 && /relation|does not exist|doesn't exist/i.test(detail)) {
+          showToast(
+            "Table admin_notes absente : exécutez sql/migration_v3_features.sql dans l’éditeur SQL Insforge.",
+            "error"
+          );
+        } else if (res.status === 503) {
+          showToast(data.error || "Insforge non configuré.", "error");
+        } else {
+          showToast("Impossible de charger les notes.", "error");
+        }
+        setNotes([]);
+        return;
+      }
       setNotes(data.notes || []);
     } catch {
-      showToast("Impossible de charger les notes (migration SQL appliquée ?).", "error");
+      showToast("Impossible de charger les notes.", "error");
       setNotes([]);
     } finally {
       setLoading(false);
@@ -87,10 +102,10 @@ export default function MessagesPanel({ packages = [] }) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 animate-fade-in">
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-        Notes en base (<code className="rounded bg-white px-1">admin_notes</code>) — même code admin
-        que les règles. Si erreur « table / relation » : migration V3 déjà exécutée côté Insforge ?
-      </div>
+      <AdminSecretBanner
+        onMemorized={load}
+        successHint="Les notes sont stockées dans la table admin_notes sur Insforge — vous pouvez en ajouter ci-dessous."
+      />
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-2 flex items-center gap-2 text-lg font-extrabold text-slate-800">

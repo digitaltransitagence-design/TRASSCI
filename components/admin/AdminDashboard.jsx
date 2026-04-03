@@ -717,7 +717,11 @@ export default function AdminDashboard() {
           )}
 
           {role === "SUPER_ADMIN" && tab === "calendar" && (
-            <ShippingCalendarPanel packages={packages} />
+            <ShippingCalendarPanel
+              packages={packages}
+              partners={partners}
+              coursiers={coursiers}
+            />
           )}
 
           {role === "SUPER_ADMIN" && tab === "ai_dashboard" && (

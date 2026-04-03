@@ -12,8 +12,10 @@ import {
   BarChart3,
   Sparkles,
   AlertTriangle,
+  Settings,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
+import RulesPanel from "@/components/admin/RulesPanel";
 import { useToast } from "@/components/providers/ToastProvider";
 
 const STORAGE_ROLE = "trass_admin_role";
@@ -128,6 +130,16 @@ export default function AdminDashboard() {
     setLoadingReport(true);
     setAiReport(null);
     try {
+      let pricingHint = "";
+      try {
+        const pr = await fetch("/api/pricing", { cache: "no-store" });
+        if (pr.ok) {
+          const p = await pr.json();
+          pricingHint = `Barème actuel (indicatif) : ramassage ${p.fees?.ramassage} F, assurance ${p.fees?.insurance} F/col, dépôt ${p.fees?.depot} F. Destinations : ${(p.destinations || []).map((d) => `${d.name}:${d.price}`).join("; ")}.`;
+        }
+      } catch {
+        /* ignore */
+      }
       const res = await fetch("/api/ai/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,6 +147,7 @@ export default function AdminDashboard() {
           total: stats.total,
           revenue: stats.revenue,
           incidents: stats.incidents,
+          pricingHint,
         }),
       });
       const j = await res.json();
@@ -340,6 +353,18 @@ export default function AdminDashboard() {
                 <Activity className="h-5 w-5" />
                 Centre de tri
               </button>
+              <button
+                type="button"
+                onClick={() => setTab("rules")}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                  tab === "rules"
+                    ? "bg-teal-700 text-white"
+                    : "text-slate-400 hover:bg-slate-800"
+                }`}
+              >
+                <Settings className="h-5 w-5" />
+                Règles & tarifs
+              </button>
               <p className="mb-2 ml-2 mt-6 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 IA
               </p>
@@ -426,9 +451,13 @@ export default function AdminDashboard() {
           {apiDown && (
             <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
               Configurez Insforge (variables d&apos;environnement) et importez{" "}
-              <code className="rounded bg-white px-1">sql/schema.sql</code>.
+              <code className="rounded bg-white px-1">sql/schema.sql</code> (et{" "}
+              <code className="rounded bg-white px-1">migration_v2_rules.sql</code> si
+              base déjà créée).
             </div>
           )}
+
+          {role === "SUPER_ADMIN" && tab === "rules" && <RulesPanel />}
 
           {role === "SUPER_ADMIN" && tab === "ai_dashboard" && (
             <div className="mx-auto max-w-5xl space-y-6 animate-fade-in">

@@ -7,6 +7,8 @@ import {
 } from "@/lib/packages-api";
 import { generatePackageId } from "@/lib/constants";
 
+const MAX_PHOTO_CHARS = 2_500_000;
+
 export async function GET(request) {
   if (!isInsforgeConfigured()) {
     return NextResponse.json(
@@ -45,15 +47,37 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const id = (body.id || generatePackageId()).toUpperCase();
+    const hasInsurance = Boolean(body.has_insurance);
+    const declaredValue = Number(body.declared_value) || 0;
+
+    if (hasInsurance && declaredValue <= 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Assurance : indiquez une valeur déclarée estimée du colis (FCFA) supérieure à 0.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (body.photo_url && String(body.photo_url).length > MAX_PHOTO_CHARS) {
+      return NextResponse.json(
+        { error: "Photo trop volumineuse (réduisez la taille ou utilisez un lien URL)." },
+        { status: 400 }
+      );
+    }
+
     const payload = {
       id,
       sender_name: body.sender_name,
       sender_phone: body.sender_phone,
+      receiver_name: body.receiver_name?.trim() || "",
       receiver_phone: body.receiver_phone,
+      declared_value: declaredValue,
       destination: body.destination,
       nature: body.nature || "Document",
       delivery_mode: body.delivery_mode || "depot",
-      has_insurance: Boolean(body.has_insurance),
+      has_insurance: hasInsurance,
       pickup_address: body.pickup_address || null,
       description: body.description || null,
       photo_url: body.photo_url || null,
@@ -62,10 +86,14 @@ export async function POST(request) {
       !payload.sender_name ||
       !payload.sender_phone ||
       !payload.receiver_phone ||
-      !payload.destination
+      !payload.destination ||
+      !payload.receiver_name
     ) {
       return NextResponse.json(
-        { error: "Champs obligatoires manquants" },
+        {
+          error:
+            "Champs obligatoires : expéditeur, téléphones, nom du destinataire, destination.",
+        },
         { status: 400 }
       );
     }

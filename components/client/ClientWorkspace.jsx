@@ -13,8 +13,9 @@ import {
   Activity,
   AlertTriangle,
   Sparkles,
+  ImagePlus,
 } from "lucide-react";
-import { TARIFS } from "@/lib/constants";
+import { NATURE_OPTIONS } from "@/lib/constants";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
@@ -57,11 +58,26 @@ function StarRating({ value, hover, onHover, onRate, disabled }) {
   );
 }
 
+function computeClientPrice(form, pricing) {
+  if (!pricing?.destinations?.length) return 0;
+  const dest = pricing.destinations.find(
+    (d) => d.id === form.destination || d.name === form.destination
+  );
+  const destPrice = dest?.price ?? 0;
+  const mode =
+    form.delivery_mode === "ramassage"
+      ? pricing.fees.ramassage
+      : pricing.fees.depot;
+  const ins = form.has_insurance ? pricing.fees.insurance : 0;
+  return destPrice + mode + ins;
+}
+
 export default function ClientWorkspace() {
   const searchParams = useSearchParams();
   const initialTrack = searchParams.get("track") || "";
   const { showToast } = useToast();
 
+  const [pricing, setPricing] = useState(null);
   const [apiDown, setApiDown] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTrack ? "track" : "send");
   const [trackId, setTrackId] = useState(initialTrack);
@@ -72,26 +88,41 @@ export default function ClientWorkspace() {
   const [formData, setFormData] = useState({
     sender_name: "",
     sender_phone: "",
+    receiver_name: "",
     receiver_phone: "",
+    declared_value: "",
     nature: "Document",
-    destination: "Korhogo",
+    destination: "",
     delivery_mode: "ramassage",
     has_insurance: false,
     pickup_address: "",
     description: "",
+    photo_url: "",
   });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [packingTips, setPackingTips] = useState([]);
 
-  const calculatePrice = useCallback(() => {
-    const dest = TARIFS.destinations[formData.destination] || 0;
-    const mode =
-      formData.delivery_mode === "ramassage"
-        ? TARIFS.options.ramassage
-        : TARIFS.options.depot;
-    const ins = formData.has_insurance ? TARIFS.options.assurance : 0;
-    return dest + mode + ins;
-  }, [formData]);
+  useEffect(() => {
+    fetch("/api/pricing", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.destinations?.length) {
+          setPricing({
+            fees: data.fees || {
+              ramassage: 1500,
+              insurance: 1000,
+              depot: 0,
+            },
+            destinations: data.destinations,
+          });
+          setFormData((prev) => ({
+            ...prev,
+            destination: prev.destination || data.destinations[0].id,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const loadTrack = useCallback(
     async (id) => {
@@ -132,6 +163,13 @@ export default function ClientWorkspace() {
     }
   }, [initialTrack, loadTrack]);
 
+  function destinationLabel(slug) {
+    const d = pricing?.destinations?.find(
+      (x) => x.id === slug || x.name === slug
+    );
+    return d?.name || slug;
+  }
+
   async function handleAnalyze() {
     if (!formData.description?.trim()) return;
     setIsAnalyzing(true);
@@ -139,7 +177,10 @@ export default function ClientWorkspace() {
       const res = await fetch("/api/ai/pack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: formData.description }),
+        body: JSON.stringify({
+          description: formData.description,
+          declared_value: formData.declared_value,
+        }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -151,6 +192,8 @@ export default function ClientWorkspace() {
         Vêtements: "Vêtements",
         Électronique: "Électronique",
         Marchandise: "Marchandise",
+        "Écrans & TV": "Écrans & TV",
+        "Écrans et TV": "Écrans & TV",
       };
       setFormData((prev) => ({
         ...prev,
@@ -166,8 +209,48 @@ export default function ClientWorkspace() {
     }
   }
 
+  function onPhotoFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showToast("Choisissez une image (photo du colis).", "error");
+      return;
+    }
+    if (file.size > 1.8 * 1024 * 1024) {
+      showToast("Image trop lourde (max ~1,8 Mo).", "error");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormData((prev) => ({ ...prev, photo_url: String(reader.result) }));
+      showToast("Photo ajoutée.", "success");
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function handleSend(e) {
     e.preventDefault();
+    if (!pricing) {
+      showToast("Chargement des tarifs… réessayez.", "error");
+      return;
+    }
+    if (formData.delivery_mode === "ramassage") {
+      if ((formData.pickup_address || "").trim().length < 12) {
+        showToast(
+          "Précisez l'adresse de ramassage (quartier, rue, repère).",
+          "error"
+        );
+        return;
+      }
+    }
+    const declaredNum = parseInt(String(formData.declared_value), 10) || 0;
+    if (formData.has_insurance && declaredNum <= 0) {
+      showToast(
+        "Assurance : indiquez une valeur déclarée estimée (FCFA) pour le colis.",
+        "error"
+      );
+      return;
+    }
     try {
       const res = await fetch("/api/packages", {
         method: "POST",
@@ -175,13 +258,16 @@ export default function ClientWorkspace() {
         body: JSON.stringify({
           sender_name: formData.sender_name,
           sender_phone: formData.sender_phone,
+          receiver_name: formData.receiver_name,
           receiver_phone: formData.receiver_phone,
+          declared_value: declaredNum,
           destination: formData.destination,
           nature: formData.nature,
           delivery_mode: formData.delivery_mode,
           has_insurance: formData.has_insurance,
           pickup_address: formData.pickup_address,
           description: formData.description,
+          photo_url: formData.photo_url || null,
         }),
       });
       if (res.status === 503) {
@@ -189,16 +275,18 @@ export default function ClientWorkspace() {
         showToast("Base Insforge non configurée sur le serveur.", "error");
         return;
       }
-      if (!res.ok) throw new Error("Création impossible");
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Création impossible");
+      }
       setApiDown(false);
       setTracked(data);
       setTrackId(data.package.id);
       setActiveTab("track");
       setPackingTips([]);
       showToast(`Colis ${data.package.id} enregistré.`, "success");
-    } catch {
-      showToast("Erreur à l'enregistrement.", "error");
+    } catch (err) {
+      showToast(err.message || "Erreur à l'enregistrement.", "error");
     }
   }
 
@@ -225,6 +313,8 @@ export default function ClientWorkspace() {
 
   const pkg = tracked?.package;
   const history = tracked?.history || [];
+  const total =
+    pricing != null ? computeClientPrice(formData, pricing) : null;
 
   return (
     <div className="min-h-screen bg-slate-100 px-4 py-10">
@@ -242,11 +332,10 @@ export default function ClientWorkspace() {
 
         {apiDown && (
           <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-            <strong>Serveur :</strong> configurez{" "}
-            <code className="rounded bg-white px-1">INSFORGE_API_URL</code> et{" "}
-            <code className="rounded bg-white px-1">INSFORGE_ANON_KEY</code>{" "}
-            (Vercel ou .env.local) puis exécutez le SQL dans{" "}
-            <code className="rounded bg-white px-1">sql/schema.sql</code>.
+            <strong>Serveur :</strong> configurez Insforge et exécutez{" "}
+            <code className="rounded bg-white px-1">sql/schema.sql</code> puis{" "}
+            <code className="rounded bg-white px-1">sql/migration_v2_rules.sql</code>
+            .
           </div>
         )}
 
@@ -295,7 +384,6 @@ export default function ClientWorkspace() {
                   onChange={(e) =>
                     setFormData({ ...formData, sender_name: e.target.value })
                   }
-                  placeholder="Ex: Soro Nagony"
                 />
                 <Input
                   label="Votre WhatsApp"
@@ -331,7 +419,7 @@ export default function ClientWorkspace() {
                 <textarea
                   className="mb-4 w-full rounded-xl border border-indigo-200 bg-white p-4 text-slate-700 outline-none focus:border-indigo-500"
                   rows={3}
-                  placeholder="Ex: 2 ordinateurs portables, chargeurs…"
+                  placeholder="Décrivez le contenu (écrans, cartons, etc.)"
                   value={formData.description}
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
@@ -352,6 +440,24 @@ export default function ClientWorkspace() {
                 )}
               </div>
 
+              <div>
+                <label className="mb-2 flex cursor-pointer items-center gap-2 text-sm font-bold text-slate-700">
+                  <ImagePlus className="h-4 w-4" />
+                  Photo du colis (optionnel)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="text-sm text-slate-600"
+                  onChange={onPhotoFile}
+                />
+                {formData.photo_url && (
+                  <p className="mt-2 text-xs text-green-700">
+                    Photo prête à l&apos;envoi.
+                  </p>
+                )}
+              </div>
+
               <div className="grid gap-6 rounded-2xl border border-slate-100 bg-slate-50 p-6 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm font-bold text-slate-700">
@@ -359,21 +465,22 @@ export default function ClientWorkspace() {
                   </label>
                   <select
                     className="w-full rounded-xl border border-slate-200 bg-white p-4 outline-none"
+                    required
                     value={formData.destination}
                     onChange={(e) =>
                       setFormData({ ...formData, destination: e.target.value })
                     }
                   >
-                    {Object.keys(TARIFS.destinations).map((ville) => (
-                      <option key={ville} value={ville}>
-                        {ville} — {TARIFS.destinations[ville]} F
+                    {(pricing?.destinations || []).map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} — {d.price} FCFA
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-bold text-slate-700">
-                    Nature
+                    Nature (les écrans / TV = risque élevé)
                   </label>
                   <select
                     className="w-full rounded-xl border border-slate-200 bg-white p-4 outline-none"
@@ -382,25 +489,33 @@ export default function ClientWorkspace() {
                       setFormData({ ...formData, nature: e.target.value })
                     }
                   >
-                    <option value="Document">Document</option>
-                    <option value="Vêtements">Vêtements</option>
-                    <option value="Électronique">Électronique</option>
-                    <option value="Marchandise">Marchandise</option>
+                    {NATURE_OPTIONS.map((n) => (
+                      <option key={n.id} value={n.id}>
+                        {n.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
-                <div className="md:col-span-2">
-                  <Input
-                    label="Téléphone du destinataire"
-                    required
-                    value={formData.receiver_phone}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        receiver_phone: e.target.value,
-                      })
-                    }
-                  />
-                </div>
+                <Input
+                  label="Nom complet du destinataire"
+                  required
+                  value={formData.receiver_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, receiver_name: e.target.value })
+                  }
+                />
+                <Input
+                  label="WhatsApp du destinataire"
+                  required
+                  value={formData.receiver_phone}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      receiver_phone: e.target.value,
+                    })
+                  }
+                  placeholder="07 XX XX XX XX"
+                />
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
@@ -424,9 +539,11 @@ export default function ClientWorkspace() {
                         }
                         className="h-4 w-4"
                       />
-                      Ramassage domicile
+                      Ramassage à domicile
                     </span>
-                    <span className="font-extrabold text-orange-600">+2000 F</span>
+                    <span className="font-extrabold text-orange-600">
+                      +{pricing?.fees?.ramassage ?? "…"} F
+                    </span>
                   </label>
                   <label
                     className={`flex cursor-pointer items-center justify-between rounded-xl border-2 p-4 transition-all ${
@@ -446,15 +563,17 @@ export default function ClientWorkspace() {
                       />
                       Dépôt agence
                     </span>
-                    <span className="font-bold text-slate-500">Gratuit</span>
+                    <span className="font-bold text-slate-500">
+                      {pricing?.fees?.depot === 0 ? "Gratuit" : `${pricing?.fees?.depot} F`}
+                    </span>
                   </label>
                 </div>
                 <div>
                   <p className="mb-3 text-sm font-bold text-slate-700">
-                    Assurance
+                    Assurance (valeur déclarée obligatoire)
                   </p>
                   <label
-                    className={`flex cursor-pointer items-center justify-between rounded-xl border-2 p-4 transition-all ${
+                    className={`mb-3 flex cursor-pointer items-center justify-between rounded-xl border-2 p-4 transition-all ${
                       formData.has_insurance
                         ? "border-green-500 bg-green-50"
                         : "border-slate-200 hover:border-slate-300"
@@ -473,17 +592,36 @@ export default function ClientWorkspace() {
                         className="h-4 w-4 rounded"
                       />
                       <span className="font-bold text-slate-800">
-                        Assurer ce colis (+1000 F)
+                        Assurer (+{pricing?.fees?.insurance ?? "…"} F / colis)
                       </span>
                     </span>
                   </label>
+                  <Input
+                    label="Valeur déclarée estimée (FCFA)"
+                    type="number"
+                    min={0}
+                    value={formData.declared_value}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        declared_value: e.target.value,
+                      })
+                    }
+                    placeholder="Ex: 150000"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Sert de base en cas de sinistre couvert — obligatoire si assurance
+                    cochée.
+                  </p>
                 </div>
               </div>
 
               {formData.delivery_mode === "ramassage" && (
-                <Input
+                <Textarea
+                  label="Adresse précise de ramassage (quartier, rue, repères)"
                   required
-                  placeholder="Adresse de ramassage (Yopougon, Cocody…)"
+                  rows={3}
+                  placeholder="Ex: Yopougon Sicogi, non loin de la pharmacie…"
                   value={formData.pickup_address}
                   onChange={(e) =>
                     setFormData({ ...formData, pickup_address: e.target.value })
@@ -495,10 +633,10 @@ export default function ClientWorkspace() {
                 <div>
                   <p className="mb-1 text-sm text-slate-500">Total estimé</p>
                   <p className="text-3xl font-extrabold text-slate-800">
-                    {calculatePrice()} FCFA
+                    {total != null ? `${total} FCFA` : "…"}
                   </p>
                 </div>
-                <Button type="submit" className="w-full md:w-auto">
+                <Button type="submit" className="w-full md:w-auto" disabled={!pricing}>
                   Valider <Check className="h-5 w-5" />
                 </Button>
               </div>
@@ -554,6 +692,18 @@ export default function ClientWorkspace() {
                   </div>
                   <Barcode className="h-8 w-8 opacity-50" />
                 </div>
+                {pkg.photo_url && (
+                  <div className="border-b border-slate-100 bg-slate-50 p-4">
+                    <p className="mb-2 text-xs font-bold uppercase text-slate-500">
+                      Photo du colis
+                    </p>
+                    <img
+                      src={pkg.photo_url}
+                      alt="Colis"
+                      className="max-h-56 rounded-xl object-contain"
+                    />
+                  </div>
+                )}
                 <div className="grid gap-8 p-6 md:grid-cols-2">
                   <div className="space-y-6">
                     <div className="flex gap-4 rounded-2xl bg-slate-50 p-4">
@@ -565,10 +715,24 @@ export default function ClientWorkspace() {
                           Trajet
                         </p>
                         <p className="font-bold text-slate-800">
-                          Abidjan → {pkg.destination}
+                          Abidjan → {destinationLabel(pkg.destination)}
                         </p>
                         <p className="mt-1 text-sm text-slate-500">
-                          Destinataire : {pkg.receiver_phone}
+                          {pkg.receiver_name && (
+                            <span className="font-medium text-slate-700">
+                              {pkg.receiver_name} —{" "}
+                            </span>
+                          )}
+                          WhatsApp : {pkg.receiver_phone}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {pkg.nature}
+                          {pkg.has_insurance && pkg.declared_value > 0 && (
+                            <span>
+                              {" "}
+                              · Assuré (valeur décl. {pkg.declared_value} F)
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -578,8 +742,15 @@ export default function ClientWorkspace() {
                           Sécurité
                         </p>
                         {pkg.has_insurance ? (
-                          <span className="flex items-center gap-1 text-sm font-bold text-green-600">
-                            <Shield className="h-4 w-4" /> Assuré
+                          <span className="flex flex-col gap-1 text-sm font-bold text-green-600">
+                            <span className="flex items-center gap-1">
+                              <Shield className="h-4 w-4" /> Assuré
+                            </span>
+                            {pkg.declared_value > 0 && (
+                              <span className="text-xs font-normal text-slate-600">
+                                Valeur décl. {pkg.declared_value} FCFA
+                              </span>
+                            )}
                           </span>
                         ) : (
                           <span className="text-sm font-bold text-slate-500">

@@ -1,11 +1,14 @@
--- Trass CI — tables public (Insforge / PostgREST)
--- Exécuter ce script dans l’éditeur SQL Insforge ou via migration projet.
+-- Trass CI — schéma complet (Insforge / PostgreSQL)
+-- Exécuter une fois dans l’éditeur SQL du projet.
 
 CREATE TABLE IF NOT EXISTS partners (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   route TEXT NOT NULL DEFAULT '',
   contact TEXT NOT NULL DEFAULT '',
+  conditions_text TEXT NOT NULL DEFAULT '',
+  whatsapp TEXT NOT NULL DEFAULT '',
+  address TEXT NOT NULL DEFAULT '',
   active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -20,11 +23,31 @@ CREATE TABLE IF NOT EXISTS coursiers (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS destinations (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  price INTEGER NOT NULL DEFAULT 0,
+  active BOOLEAN NOT NULL DEFAULT true,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_destinations_active ON destinations(active);
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS packages (
   id TEXT PRIMARY KEY,
   sender_name TEXT NOT NULL,
   sender_phone TEXT NOT NULL,
+  receiver_name TEXT NOT NULL DEFAULT '',
   receiver_phone TEXT NOT NULL,
+  declared_value INTEGER NOT NULL DEFAULT 0,
   destination TEXT NOT NULL,
   nature TEXT NOT NULL DEFAULT 'Document',
   delivery_mode TEXT NOT NULL DEFAULT 'depot',
@@ -56,7 +79,6 @@ CREATE TABLE IF NOT EXISTS package_history (
 
 CREATE INDEX IF NOT EXISTS idx_package_history_pkg ON package_history(package_id);
 
--- Données initiales (partenaires & coursiers)
 INSERT INTO partners (id, name, route, contact, active) VALUES
   ('P-SBTA', 'SBTA Transport', 'Nord', '0700112233', true),
   ('P-UTB', 'UTB', 'Centre/Ouest', '0500445566', true)
@@ -67,17 +89,16 @@ INSERT INTO coursiers (id, name, phone, status) VALUES
   ('C-02', 'Kouassi (Camionnette)', '0506070809', 'EN_COURSE')
 ON CONFLICT (id) DO NOTHING;
 
--- ---------------------------------------------------------------------------
--- Enrichir la base (Insforge)
--- ---------------------------------------------------------------------------
--- 1) Ouvrir le projet sur insforge.dev → SQL / Database → exécuter les INSERT ci-dessous.
--- 2) Nouveau partenaire (gare / ligne) :
---    INSERT INTO partners (id, name, route, contact, active)
---    VALUES ('P-XXX', 'Nom affiché', 'Axe géographique', '07xxxxxxxx', true)
---    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, route = EXCLUDED.route, contact = EXCLUDED.contact, active = EXCLUDED.active;
--- 3) Nouveau coursier :
---    INSERT INTO coursiers (id, name, phone, status) VALUES ('C-XX', 'Prénom', '07xxxxxxxx', 'DISPONIBLE')
---    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, phone = EXCLUDED.phone, status = EXCLUDED.status;
--- 4) Modifier une ligne : UPDATE partners SET active = false WHERE id = 'P-XXX';
--- 5) Les colis (packages) sont créés par l’app / API ; pas d’insert manuel sauf tests.
--- ---------------------------------------------------------------------------
+INSERT INTO destinations (id, name, price, active, sort_order) VALUES
+  ('korhogo', 'Korhogo', 3000, true, 1),
+  ('bouake', 'Bouaké', 2000, true, 2),
+  ('san-pedro', 'San Pedro', 3500, true, 3),
+  ('yamoussoukro', 'Yamoussoukro', 1500, true, 4),
+  ('man', 'Man', 4000, true, 5)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO app_settings (key, value) VALUES
+  ('fee_ramassage', '1500'),
+  ('fee_insurance', '1000'),
+  ('fee_depot', '0')
+ON CONFLICT (key) DO NOTHING;

@@ -7,7 +7,11 @@ export async function POST(request) {
     if (!description?.trim()) {
       return NextResponse.json({ error: "Description requise" }, { status: 400 });
     }
-    const prompt = `L'utilisateur veut expédier: "${description}". Détermine la catégorie principale parmi: Document, Vêtements, Électronique, Marchandise. Dis si c'est fragile (true/false). Donne exactement 2 conseils courts d'emballage en français. Réponds UNIQUEMENT en JSON valide avec les clés: categorie, fragile, conseils (tableau de 2 strings).`;
+    const prompt = `Contexte: expédition colis en Côte d'Ivoire, trajet souvent long (Abidjan vers l'intérieur: chaleur, humidité, vibrations routières, manutention en gare). L'utilisateur décrit: "${description}".
+
+Tâche: déduis la catégorie parmi Document, Vêtements, Électronique, Marchandise. Indique fragile (true/false) si casse/vibration/humidité sont un risque. Donne exactement 2 conseils courts d'emballage adaptés au contexte ivoirien (papier bulle, étanchéité, calage, étiquetage).
+
+Réponds UNIQUEMENT en JSON valide: {"categorie":"...","fragile":true|false,"conseils":["...","..."]}`;
     const text = await generateContent(prompt, { json: true });
     if (!text) {
       return NextResponse.json(

@@ -7,7 +7,12 @@ export async function POST(request) {
     if (!address?.trim()) {
       return NextResponse.json({ error: "Adresse requise" }, { status: 400 });
     }
-    const prompt = `Tu es un assistant logistique à Abidjan, Côte d'Ivoire. Adresse de ramassage: "${address}". Destination colis: "${destination || "non précisée"}". Donne 3 à 5 phrases courtes en français sur les points de vigilance trafic / accès (Adjamé, heures de pointe, pluie) — pas de données temps réel inventées, reste prudent et utile pour un coursier moto.`;
+    const prompt = `Tu es un assistant logistique terrain à Abidjan (Côte d'Ivoire), pour un coursier qui doit récupérer un colis puis le ramener vers le hub / les gares partenaires pour un envoi vers l'intérieur.
+
+Adresse de ramassage: "${address}".
+Destination du colis (ville intérieur): "${destination || "non précisée"}".
+
+Donne 4 à 6 phrases courtes en français: accès quartier, circulation (sans inventer de temps réel), zones souvent congestionnées (ex. approches gares, marchés), prudence pluie / routes glissantes, et attitude professionnelle en gare. Ne cite pas de données GPS ou d'heures précises inventées. Ton: opérationnel, utile pour une moto ou petite camionnette.`;
     const text = await generateContent(prompt, { json: false });
     if (!text) {
       return NextResponse.json(

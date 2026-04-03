@@ -66,3 +66,18 @@ INSERT INTO coursiers (id, name, phone, status) VALUES
   ('C-01', 'Moussa (Moto 1)', '0102030405', 'DISPONIBLE'),
   ('C-02', 'Kouassi (Camionnette)', '0506070809', 'EN_COURSE')
 ON CONFLICT (id) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- Enrichir la base (Insforge)
+-- ---------------------------------------------------------------------------
+-- 1) Ouvrir le projet sur insforge.dev → SQL / Database → exécuter les INSERT ci-dessous.
+-- 2) Nouveau partenaire (gare / ligne) :
+--    INSERT INTO partners (id, name, route, contact, active)
+--    VALUES ('P-XXX', 'Nom affiché', 'Axe géographique', '07xxxxxxxx', true)
+--    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, route = EXCLUDED.route, contact = EXCLUDED.contact, active = EXCLUDED.active;
+-- 3) Nouveau coursier :
+--    INSERT INTO coursiers (id, name, phone, status) VALUES ('C-XX', 'Prénom', '07xxxxxxxx', 'DISPONIBLE')
+--    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, phone = EXCLUDED.phone, status = EXCLUDED.status;
+-- 4) Modifier une ligne : UPDATE partners SET active = false WHERE id = 'P-XXX';
+-- 5) Les colis (packages) sont créés par l’app / API ; pas d’insert manuel sauf tests.
+-- ---------------------------------------------------------------------------

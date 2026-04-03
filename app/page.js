@@ -9,11 +9,13 @@ import {
   Sparkles,
 } from "lucide-react";
 import { LandingTrackForm } from "@/components/landing/LandingTrackForm";
+import NotificationShowcase from "@/components/landing/NotificationShowcase";
+import AbidjanInteriorStrip from "@/components/landing/AbidjanInteriorStrip";
 
 export const metadata = {
   title: "Trass CI — Expédiez sans stress | Abidjan → Intérieur",
   description:
-    "Logistique bout en bout en Côte d'Ivoire : ramassage, assurance, suivi et remise en gare.",
+    "Colis Abidjan vers l'intérieur : ramassage, notifications, assurance et remise en gare partenaire.",
 };
 
 export default function Home() {
@@ -37,17 +39,23 @@ export default function Home() {
               Expédiez sans stress
             </h1>
             <p className="mb-8 text-lg leading-relaxed text-blue-100 md:text-xl">
-              De la collecte à domicile jusqu&apos;à la remise en gare à
-              l&apos;intérieur du pays.{" "}
+              L&apos;axe <strong className="text-white">Abidjan → intérieur</strong>{" "}
+              mérite la même clarté qu&apos;un « votre courrier est arrivé au bureau »
+              : nous structurons le trajet du colis et{" "}
               <strong className="text-white">
-                Ramassage, assurance, suivi et partenaires de confiance.
-              </strong>
+                chaque étape clé est visible dans votre suivi
+              </strong>{" "}
+              — du ramassage à la remise en gare chez le destinataire.
             </p>
             <LandingTrackForm />
             <div className="mt-8 flex flex-wrap items-center gap-6 text-sm font-medium text-blue-200">
               <span className="flex items-center gap-2">
                 <Check className="h-5 w-5 text-green-400" />
-                Partenaires fiables (SBTA, UTB…)
+                Notifications à chaque statut important
+              </span>
+              <span className="flex items-center gap-2">
+                <Check className="h-5 w-5 text-green-400" />
+                Partenaires (SBTA, UTB…)
               </span>
               <span className="flex items-center gap-2">
                 <Check className="h-5 w-5 text-green-400" />
@@ -76,7 +84,7 @@ export default function Home() {
             ["100%", "Couverture nationale"],
             ["+5 000", "Colis sécurisés"],
             ["12", "Gares partenaires"],
-            ["24/7", "Suivi & assistance"],
+            ["24/7", "Suivi & alertes"],
           ].map(([n, l]) => (
             <div key={l} className="first:border-0">
               <p
@@ -92,6 +100,16 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white py-20">
+        <AbidjanInteriorStrip />
+      </section>
+
+      <section className="py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <NotificationShowcase />
+        </div>
+      </section>
+
       <section className="py-24">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-16 text-center">
@@ -99,8 +117,8 @@ export default function Home() {
               Nos garanties
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-slate-500">
-              Assurance optionnelle, remise sur pièce d&apos;identité, ramassage
-              à Abidjan.
+              Assurance, identité vérifiée en gare, ramassage à Abidjan — pensé
+              pour les longues distances vers l&apos;intérieur.
             </p>
           </div>
           <div className="grid gap-8 md:grid-cols-3">
@@ -228,6 +246,10 @@ export default function Home() {
               {
                 q: "Comment payer ?",
                 a: "Le paiement s'effectue selon le mode indiqué lors de la prise en charge (coursier ou agence).",
+              },
+              {
+                q: "À quoi servent les notifications / le suivi ?",
+                a: "Sur Abidjan–intérieur, le délai et le trajet créent souvent des appels « où est le colis ? ». Le suivi par statut (comme une confirmation d'arrivée) réduit cette friction : expéditeur et destinataire voient la progression jusqu'à la remise en gare.",
               },
             ].map(({ q, a }) => (
               <div

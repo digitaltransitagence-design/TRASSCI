@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
-import { getClientGuidePlainText } from "@/lib/resend-mail";
+import { buildGuidePdfBytes } from "@/lib/guide-pdf";
+
+export const runtime = "nodejs";
 
 /**
- * Téléchargement du guide (même contenu que l’e-mail Resend).
+ * Téléchargement du guide en PDF (même contenu que l’e-mail Resend).
  */
 export async function GET() {
-  const text = getClientGuidePlainText();
-  const filename = "trass-ci-guide-formulaire-envoi.txt";
-  return new NextResponse(text, {
+  const pdfBytes = await buildGuidePdfBytes();
+  const filename = "trass-ci-guide-formulaire-envoi.pdf";
+  return new NextResponse(Buffer.from(pdfBytes), {
     status: 200,
     headers: {
-      "Content-Type": "text/plain; charset=utf-8",
+      "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "public, max-age=3600, s-maxage=3600",
     },

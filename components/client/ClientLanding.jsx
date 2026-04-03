@@ -202,9 +202,9 @@ export default function ClientLanding() {
               Connecté en tant que{" "}
               <strong className="text-blue-900">{session.user?.email}</strong>
             </p>
-            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link href={afterLogin}>
-                <Button type="button" className="w-full min-w-[220px] sm:w-auto">
+            <div className="mx-auto grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+              <Link href={afterLogin} className="block w-full">
+                <Button type="button" className="w-full">
                   <Package className="h-5 w-5" aria-hidden />
                   Accéder à mon envoi
                 </Button>
@@ -212,6 +212,7 @@ export default function ClientLanding() {
               <Button
                 type="button"
                 variant="outline"
+                className="w-full"
                 onClick={() => signOut({ callbackUrl: "/client" })}
               >
                 Déconnexion
@@ -222,26 +223,26 @@ export default function ClientLanding() {
                 Guide « comment remplir le formulaire »
               </p>
               <p className="mb-3 text-xs text-slate-600">
-                Recevoir par e-mail ou télécharger le fichier texte (même contenu).
+                Recevoir par e-mail ou télécharger le PDF (même contenu).
               </p>
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <Button
                   type="button"
                   variant="secondary"
                   disabled={guideSending}
                   onClick={sendGuideEmail}
-                  className="w-full sm:w-auto"
+                  className="w-full justify-center"
                 >
                   <Mail className="h-4 w-4" aria-hidden />
                   {guideSending ? "Envoi…" : "M'envoyer le guide"}
                 </Button>
                 <a
                   href="/api/client/guide"
-                  download="trass-ci-guide-formulaire-envoi.txt"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-6 py-3 text-center text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50 sm:w-auto"
+                  download="trass-ci-guide-formulaire-envoi.pdf"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-6 py-3 text-center text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50"
                 >
                   <Download className="h-4 w-4 shrink-0" aria-hidden />
-                  Télécharger (.txt)
+                  Télécharger (.pdf)
                 </a>
               </div>
             </div>
@@ -413,16 +414,16 @@ export default function ClientLanding() {
             <li key={line}>{line}</li>
           ))}
         </ul>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="mt-6 grid grid-cols-1 items-center gap-4 sm:grid-cols-[auto_1fr] sm:gap-6">
           <a
             href="/api/client/guide"
-            download="trass-ci-guide-formulaire-envoi.txt"
-            className="inline-flex w-fit items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/30 transition-colors hover:bg-orange-600"
+            download="trass-ci-guide-formulaire-envoi.pdf"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/30 transition-colors hover:bg-orange-600 sm:w-auto"
           >
             <Download className="h-4 w-4 shrink-0" aria-hidden />
-            Télécharger le guide complet (.txt)
+            Télécharger le guide (.pdf)
           </a>
-          <p className="text-sm text-slate-500">
+          <p className="text-center text-sm text-slate-500 sm:text-left">
             Connectez-vous pour recevoir aussi ce récapitulatif par e-mail.
           </p>
         </div>

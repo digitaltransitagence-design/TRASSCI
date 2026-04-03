@@ -135,7 +135,7 @@ export default function ClientWorkspace() {
     fetch("/api/pricing", { cache: "no-store" })
       .then(async (r) => {
         const data = await r.json().catch(() => ({}));
-        if (data.destinations?.length) {
+        if (r.ok && data.destinations?.length) {
           setPricing({
             fees: data.fees || {
               ramassage: 1500,
@@ -152,9 +152,7 @@ export default function ClientWorkspace() {
           applyFallbackPricing();
         }
       })
-      .catch(() => {
-        applyFallbackPricing();
-      });
+      .catch(() => applyFallbackPricing());
   }, [session]);
 
   const loadTrack = useCallback(
@@ -400,12 +398,11 @@ export default function ClientWorkspace() {
           author: "Client",
         }),
       });
+      const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || "Erreur");
+        throw new Error(payload.error || "Erreur");
       }
-      const data = await res.json();
-      setTracked(data);
+      setTracked(payload);
       showToast("Merci pour votre avis !", "success");
     } catch (e) {
       showToast(e.message || "Erreur enregistrement note.", "error");
@@ -438,11 +435,13 @@ export default function ClientWorkspace() {
         </div>
 
         {apiDown && (
-          <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-            <strong>Serveur :</strong> configurez Insforge et exécutez{" "}
+          <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+            <strong>Données temporairement indisponibles.</strong> Le projet Insforge peut être en
+            pause ou en maintenance — vérifiez le dashboard Insforge. Si besoin, exécutez aussi les
+            scripts SQL :{" "}
             <code className="rounded bg-white px-1">sql/schema.sql</code>,{" "}
-            <code className="rounded bg-white px-1">migration_v2_rules.sql</code> et{" "}
-            <code className="rounded bg-white px-1">migration_v3_features.sql</code> si besoin.
+            <code className="rounded bg-white px-1">migration_v2_rules.sql</code>,{" "}
+            <code className="rounded bg-white px-1">migration_v3_features.sql</code>.
           </div>
         )}
 

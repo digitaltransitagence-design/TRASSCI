@@ -107,9 +107,18 @@ export async function POST(request) {
     return NextResponse.json(data, { status: 201 });
   } catch (e) {
     console.error(e);
+    const raw = String(e?.message || e || "");
+    const insforgeDown =
+      /\b503\b|No backend services|backend services available/i.test(raw);
+    const userMsg = insforgeDown
+      ? "Service de données temporairement indisponible. Réessayez dans quelques minutes, ou vérifiez que votre projet Insforge est actif (dashboard)."
+      : raw || "Erreur lors de la création du colis.";
     return NextResponse.json(
-      { error: e.message || "Erreur création" },
-      { status: 500 }
+      {
+        error: userMsg,
+        code: insforgeDown ? "INSFORGE_UNAVAILABLE" : "INSFORGE_ERROR",
+      },
+      { status: insforgeDown ? 503 : 500 }
     );
   }
 }

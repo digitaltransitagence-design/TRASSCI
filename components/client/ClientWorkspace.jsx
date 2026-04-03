@@ -19,6 +19,7 @@ import {
   Share2,
 } from "lucide-react";
 import { NATURE_OPTIONS } from "@/lib/constants";
+import { FALLBACK_DESTINATIONS, FALLBACK_FEES } from "@/lib/pricing";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
@@ -106,6 +107,7 @@ export default function ClientWorkspace() {
   });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [packingTips, setPackingTips] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (status !== "unauthenticated") return;
@@ -117,9 +119,22 @@ export default function ClientWorkspace() {
 
   useEffect(() => {
     if (!session) return;
+
+    function applyFallbackPricing() {
+      const dests = FALLBACK_DESTINATIONS.filter((d) => d.active !== false);
+      setPricing({
+        fees: { ...FALLBACK_FEES },
+        destinations: dests,
+      });
+      setFormData((prev) => ({
+        ...prev,
+        destination: prev.destination || dests[0]?.id || "",
+      }));
+    }
+
     fetch("/api/pricing", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
         if (data.destinations?.length) {
           setPricing({
             fees: data.fees || {
@@ -133,9 +148,13 @@ export default function ClientWorkspace() {
             ...prev,
             destination: prev.destination || data.destinations[0].id,
           }));
+        } else {
+          applyFallbackPricing();
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        applyFallbackPricing();
+      });
   }, [session]);
 
   const loadTrack = useCallback(
@@ -286,6 +305,7 @@ export default function ClientWorkspace() {
       );
       return;
     }
+    setSubmitting(true);
     try {
       const res = await fetch("/api/packages", {
         method: "POST",
@@ -305,12 +325,16 @@ export default function ClientWorkspace() {
           photo_url: formData.photo_url || null,
         }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.status === 503) {
         setApiDown(true);
-        showToast("Base Insforge non configurée sur le serveur.", "error");
+        showToast(
+          data.error ||
+            "Service de données indisponible. Réessayez plus tard ou vérifiez Insforge.",
+          "error"
+        );
         return;
       }
-      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data.error || "Création impossible");
       }
@@ -322,6 +346,8 @@ export default function ClientWorkspace() {
       showToast(`Colis ${data.package.id} enregistré.`, "success");
     } catch (err) {
       showToast(err.message || "Erreur à l'enregistrement.", "error");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -717,8 +743,18 @@ export default function ClientWorkspace() {
                     {total != null ? `${total} FCFA` : "…"}
                   </p>
                 </div>
-                <Button type="submit" className="w-full md:w-auto" disabled={!pricing}>
-                  Valider <Check className="h-5 w-5" />
+                <Button
+                  type="submit"
+                  className="w-full md:w-auto"
+                  disabled={!pricing || submitting}
+                >
+                  {submitting ? (
+                    "Enregistrement…"
+                  ) : (
+                    <>
+                      Valider <Check className="h-5 w-5" />
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

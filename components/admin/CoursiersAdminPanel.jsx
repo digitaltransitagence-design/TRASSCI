@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
+import AdminSecretBanner from "@/components/admin/AdminSecretBanner";
 import { Bike, Trash2 } from "lucide-react";
 import { useToast } from "@/components/providers/ToastProvider";
 
@@ -105,10 +106,13 @@ export default function CoursiersAdminPanel({ onChanged }) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 animate-fade-in">
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-        Création / modification / suppression : code <code className="rounded bg-white px-1">ADMIN_SECRET</code>{" "}
-        + header session (comme les règles tarifaires).
-      </div>
+      <AdminSecretBanner
+        onMemorized={() => {
+          load();
+          onChanged?.();
+        }}
+        successHint="Vous pouvez créer, modifier ou supprimer des coursiers ci-dessous."
+      />
 
       <form
         onSubmit={createCoursier}

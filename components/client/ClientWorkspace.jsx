@@ -17,6 +17,7 @@ import {
   ImagePlus,
   Copy,
   Share2,
+  BadgeCheck,
 } from "lucide-react";
 import { NATURE_OPTIONS } from "@/lib/constants";
 import { FALLBACK_DESTINATIONS, FALLBACK_FEES } from "@/lib/pricing";
@@ -108,6 +109,8 @@ export default function ClientWorkspace() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [packingTips, setPackingTips] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  /** Après création réussie : { id } pour la modale de confirmation */
+  const [sendSuccessModal, setSendSuccessModal] = useState(null);
 
   useEffect(() => {
     if (status !== "unauthenticated") return;
@@ -192,6 +195,15 @@ export default function ClientWorkspace() {
     setTrackId(initialTrack);
     loadTrack(initialTrack);
   }, [initialTrack, loadTrack, session]);
+
+  useEffect(() => {
+    if (!sendSuccessModal) return;
+    function onKey(e) {
+      if (e.key === "Escape") setSendSuccessModal(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sendSuccessModal]);
 
   if (status === "loading") {
     return (
@@ -324,11 +336,13 @@ export default function ClientWorkspace() {
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 503) {
+      if (res.status === 503 || res.status === 504) {
         setApiDown(true);
         showToast(
           data.error ||
-            "Service de données indisponible. Réessayez plus tard ou vérifiez Insforge.",
+            (res.status === 504
+              ? "Délai dépassé côté base de données. Réessayez."
+              : "Service de données indisponible. Réessayez plus tard ou vérifiez Insforge."),
           "error"
         );
         return;
@@ -341,7 +355,7 @@ export default function ClientWorkspace() {
       setTrackId(data.package.id);
       setActiveTab("track");
       setPackingTips([]);
-      showToast(`Colis ${data.package.id} enregistré.`, "success");
+      setSendSuccessModal({ id: data.package.id });
     } catch (err) {
       showToast(err.message || "Erreur à l'enregistrement.", "error");
     } finally {
@@ -934,6 +948,77 @@ export default function ClientWorkspace() {
           </div>
         )}
       </div>
+
+      {sendSuccessModal && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="send-success-title"
+          onClick={() => setSendSuccessModal(null)}
+        >
+          <div
+            className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200 animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 px-6 py-8 text-center text-white">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/20">
+                <BadgeCheck className="h-9 w-9" aria-hidden />
+              </div>
+              <h2 id="send-success-title" className="text-2xl font-extrabold">
+                Félicitations !
+              </h2>
+              <p className="mt-2 text-sm font-medium text-emerald-50">
+                Votre envoi est enregistré et confirmé.
+              </p>
+            </div>
+            <div className="space-y-4 px-6 py-6 text-center">
+              <p className="text-sm text-slate-600">
+                Voici votre <strong>numéro de suivi</strong> — nous l&apos;appelons aussi
+                votre <strong>référence</strong> pour identifier ce colis.
+              </p>
+              <div className="rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/80 px-4 py-4">
+                <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Référence / tracking
+                </p>
+                <p className="break-all font-mono text-xl font-extrabold tracking-tight text-blue-950">
+                  {sendSuccessModal.id}
+                </p>
+              </div>
+              <p className="text-sm leading-relaxed text-slate-600">
+                <strong>Conservez-le précieusement</strong> : vous en aurez besoin pour suivre
+                l&apos;acheminement ou nous contacter à propos de ce colis.
+              </p>
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(sendSuccessModal.id);
+                      showToast("Numéro copié dans le presse-papiers.", "success");
+                    } catch {
+                      showToast("Copie impossible sur ce navigateur.", "error");
+                    }
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                  Copier le numéro
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="w-full sm:w-auto"
+                  onClick={() => setSendSuccessModal(null)}
+                >
+                  Retour à mon espace
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

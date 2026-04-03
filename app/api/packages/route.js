@@ -5,6 +5,7 @@ import {
   listPackages,
   fetchPackageWithHistory,
 } from "@/lib/packages-api";
+import { loadPricingRules, computePriceFromRules } from "@/lib/pricing";
 import { generatePackageId } from "@/lib/constants";
 
 const MAX_PHOTO_CHARS = 2_500_000;
@@ -103,22 +104,39 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    const data = await insertPackageAndHistory(payload);
+
+    const rules = await loadPricingRules();
+    const price = computePriceFromRules(
+      {
+        destination: payload.destination,
+        delivery_mode: payload.delivery_mode,
+        has_insurance: payload.has_insurance,
+      },
+      rules
+    );
+    const data = await insertPackageAndHistory(payload, { price });
     return NextResponse.json(data, { status: 201 });
   } catch (e) {
     console.error(e);
     const raw = String(e?.message || e || "");
+    const timeout = /délai dépassé|ne répond pas assez vite/i.test(raw);
     const insforgeDown =
       /\b503\b|No backend services|backend services available/i.test(raw);
-    const userMsg = insforgeDown
-      ? "Service de données temporairement indisponible. Réessayez dans quelques minutes, ou vérifiez que votre projet Insforge est actif (dashboard)."
-      : raw || "Erreur lors de la création du colis.";
+    const userMsg = timeout
+      ? "Délai dépassé : Insforge ne répond pas assez vite. Réessayez ou vérifiez le dashboard Insforge."
+      : insforgeDown
+        ? "Service de données temporairement indisponible. Réessayez dans quelques minutes, ou vérifiez que votre projet Insforge est actif (dashboard)."
+        : raw || "Erreur lors de la création du colis.";
     return NextResponse.json(
       {
         error: userMsg,
-        code: insforgeDown ? "INSFORGE_UNAVAILABLE" : "INSFORGE_ERROR",
+        code: timeout
+          ? "INSFORGE_TIMEOUT"
+          : insforgeDown
+            ? "INSFORGE_UNAVAILABLE"
+            : "INSFORGE_ERROR",
       },
-      { status: insforgeDown ? 503 : 500 }
+      { status: timeout ? 504 : insforgeDown ? 503 : 500 }
     );
   }
 }

@@ -190,8 +190,13 @@ export default function ClientLanding() {
           Bienvenue sur votre espace client
         </h1>
         <p className="mt-3 text-lg text-slate-600">
-          Créez un compte en un clic avec Google, ou avec un e-mail et un mot de passe. Ensuite,
-          accédez au formulaire d&apos;envoi et au suivi de vos colis.
+          {session
+            ? "Accédez au formulaire d'envoi, suivez vos colis ou téléchargez le guide."
+            : googleEnabled && authStatusLoaded
+              ? "Créez un compte en un clic avec Google, ou avec un e-mail et un mot de passe. Ensuite, accédez au formulaire d'envoi et au suivi de vos colis."
+              : authStatusLoaded
+                ? "Créez un compte avec votre e-mail et un mot de passe, puis accédez au formulaire d'envoi et au suivi de vos colis."
+                : "Créez un compte ou connectez-vous pour accéder au formulaire d'envoi et au suivi de vos colis."}
         </p>
       </div>
 
@@ -249,20 +254,20 @@ export default function ClientLanding() {
           </div>
         ) : (
           <>
-            <div className="mb-4 text-center">
-              <p className="text-sm font-semibold text-slate-800">Connexion avec Google</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Première utilisation : un compte est créé automatiquement avec votre adresse Google.
-              </p>
-            </div>
-
             {!authStatusLoaded ? (
               <div
-                className="mb-6 h-12 w-full animate-pulse rounded-xl bg-slate-100"
+                className="mb-6 h-24 w-full animate-pulse rounded-xl bg-slate-100"
                 aria-hidden
               />
             ) : googleEnabled ? (
               <>
+                <div className="mb-4 text-center">
+                  <p className="text-sm font-semibold text-slate-800">Connexion avec Google</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Première utilisation : un compte est créé automatiquement avec votre adresse
+                    Google.
+                  </p>
+                </div>
                 <Button
                   type="button"
                   className="w-full"
@@ -299,26 +304,15 @@ export default function ClientLanding() {
                 </div>
               </>
             ) : (
-              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-left text-sm text-amber-950">
-                <p className="font-semibold">Google n&apos;est pas activé côté serveur</p>
-                <p className="mt-2 leading-relaxed text-amber-900/95">
-                  Ajoutez les variables{" "}
-                  <code className="rounded bg-white px-1 py-0.5 text-xs">GOOGLE_CLIENT_ID</code> et{" "}
-                  <code className="rounded bg-white px-1 py-0.5 text-xs">GOOGLE_CLIENT_SECRET</code>{" "}
-                  (Google Cloud Console → OAuth 2.0), plus{" "}
-                  <code className="rounded bg-white px-1 py-0.5 text-xs">NEXTAUTH_URL</code> et{" "}
-                  <code className="rounded bg-white px-1 py-0.5 text-xs">NEXTAUTH_SECRET</code>, dans
-                  Vercel ou <code className="text-xs">.env.local</code>, puis redéployez.
-                </p>
-                <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center" aria-hidden>
-                    <div className="w-full border-t border-amber-200/80" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-amber-50 px-2 text-amber-800/80">ou</span>
-                  </div>
+              <>
+                <div className="mb-4 text-center">
+                  <p className="text-sm font-semibold text-slate-800">Connexion par e-mail</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Inscrivez-vous ou connectez-vous avec l&apos;adresse et le mot de passe
+                    ci-dessous.
+                  </p>
                 </div>
-              </div>
+              </>
             )}
 
             <div className="mb-4 flex gap-2 rounded-xl bg-slate-100 p-1">

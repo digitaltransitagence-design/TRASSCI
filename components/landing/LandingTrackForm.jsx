@@ -12,7 +12,7 @@ export function LandingTrackForm() {
     e.preventDefault();
     const q = trackId.trim();
     if (q) {
-      router.push(`/client?track=${encodeURIComponent(q)}`);
+      router.push(`/client/envoi?track=${encodeURIComponent(q)}`);
     } else {
       router.push("/client");
     }

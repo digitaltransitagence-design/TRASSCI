@@ -124,6 +124,19 @@ CREATE TABLE IF NOT EXISTS admin_team_permissions (
 
 CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users(lower(email));
 
+CREATE TABLE IF NOT EXISTS client_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT,
+  name TEXT NOT NULL DEFAULT '',
+  google_id TEXT UNIQUE,
+  image TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_client_accounts_email ON client_accounts(lower(email));
+
 INSERT INTO partners (id, name, route, contact, active) VALUES
   ('P-SBTA', 'SBTA Transport', 'Nord', '0700112233', true),
   ('P-UTB', 'UTB', 'Centre/Ouest', '0500445566', true)

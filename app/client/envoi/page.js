@@ -1,12 +1,12 @@
 import { Suspense } from "react";
-import ClientLanding from "@/components/client/ClientLanding";
+import ClientWorkspace from "@/components/client/ClientWorkspace";
 
 export const metadata = {
-  title: "Espace client | Trass CI",
-  description: "Connexion, inscription et accès au formulaire d'envoi.",
+  title: "Envoi & suivi | Espace client | Trass CI",
+  description: "Créer un envoi et suivre vos colis.",
 };
 
-export default function ClientPage() {
+export default function ClientEnvoiPage() {
   return (
     <Suspense
       fallback={
@@ -15,7 +15,7 @@ export default function ClientPage() {
         </div>
       }
     >
-      <ClientLanding />
+      <ClientWorkspace />
     </Suspense>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   Package,
   Search,
@@ -76,8 +77,29 @@ function computeClientPrice(form, pricing) {
 
 export default function ClientWorkspace() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const initialTrack = searchParams.get("track") || "";
   const { showToast } = useToast();
+
+  useEffect(() => {
+    if (status !== "unauthenticated") return;
+    const path = typeof window !== "undefined" ? window.location.pathname : "";
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    const next = encodeURIComponent(`${path}${search}`);
+    router.replace(`/client?next=${next}`);
+  }, [status, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-slate-600">
+        Vérification de la session…
+      </div>
+    );
+  }
+  if (!session) {
+    return null;
+  }
 
   const [pricing, setPricing] = useState(null);
   const [apiDown, setApiDown] = useState(false);
@@ -306,7 +328,7 @@ export default function ClientWorkspace() {
   async function shareTrackingLink() {
     const id = tracked?.package?.id;
     if (!id) return;
-    const url = `${typeof window !== "undefined" ? window.location.origin : ""}/client?track=${encodeURIComponent(id)}`;
+    const url = `${typeof window !== "undefined" ? window.location.origin : ""}/client/envoi?track=${encodeURIComponent(id)}`;
     try {
       if (navigator.share) {
         await navigator.share({
@@ -365,9 +387,15 @@ export default function ClientWorkspace() {
           <h1 className="text-3xl font-extrabold text-blue-900">
             Mon espace Trass CI
           </h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-slate-600">
+            <Link href="/client" className="text-blue-700 underline">
+              Mon compte
+            </Link>
+            <span aria-hidden className="text-slate-300">
+              ·
+            </span>
             <Link href="/" className="text-blue-700 underline">
-              Retour à l&apos;accueil
+              Accueil
             </Link>
           </p>
         </div>

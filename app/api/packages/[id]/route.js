@@ -56,7 +56,7 @@ export async function PATCH(request, { params }) {
     const body = await request.json();
     const { author, appendHistory, ...patch } = body;
     if (!isClientRatingPatch(patch)) {
-      const denied = requireAdmin(request);
+      const denied = requireAdmin(request, { permission: "dispatch" });
       if (denied) return denied;
     }
     const data = await patchPackage(decodeURIComponent(id), patch, {

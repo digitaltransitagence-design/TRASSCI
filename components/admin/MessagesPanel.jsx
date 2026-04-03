@@ -4,12 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/providers/ToastProvider";
-
-function adminHeaders() {
-  if (typeof window === "undefined") return {};
-  const s = sessionStorage.getItem("trass_admin_secret");
-  return s ? { "x-admin-secret": s } : {};
-}
+import { adminFetch } from "@/components/admin/adminFetch";
 
 export default function MessagesPanel({ packages = [] }) {
   const { showToast } = useToast();
@@ -21,7 +16,7 @@ export default function MessagesPanel({ packages = [] }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/notes", { headers: adminHeaders() });
+      const res = await adminFetch("/api/admin/notes");
       if (res.status === 401) {
         showToast("Code admin requis (ADMIN_SECRET + mémoriser le code).", "error");
         setNotes([]);
@@ -60,9 +55,9 @@ export default function MessagesPanel({ packages = [] }) {
     const t = draft.trim();
     if (!t) return;
     try {
-      const res = await fetch("/api/admin/notes", {
+      const res = await adminFetch("/api/admin/notes", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...adminHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: t, author_label: authorLabel.trim() || "Admin" }),
       });
       if (res.status === 401) {
@@ -81,9 +76,8 @@ export default function MessagesPanel({ packages = [] }) {
   async function removeNote(id) {
     if (!window.confirm("Supprimer cette note ?")) return;
     try {
-      const res = await fetch(`/api/admin/notes/${encodeURIComponent(id)}`, {
+      const res = await adminFetch(`/api/admin/notes/${encodeURIComponent(id)}`, {
         method: "DELETE",
-        headers: adminHeaders(),
       });
       if (res.status === 401) {
         showToast("Code admin requis.", "error");

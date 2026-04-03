@@ -7,7 +7,7 @@ import {
 } from "@/lib/insforge";
 
 export async function PATCH(request, { params }) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "coursiers" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });
@@ -41,7 +41,7 @@ export async function PATCH(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "coursiers" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });

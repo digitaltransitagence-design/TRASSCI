@@ -3,12 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/providers/ToastProvider";
-
-function adminHeaders() {
-  if (typeof window === "undefined") return {};
-  const s = sessionStorage.getItem("trass_admin_secret");
-  return s ? { "x-admin-secret": s } : {};
-}
+import { adminFetch } from "@/components/admin/adminFetch";
 
 export default function RulesPanel() {
   const { showToast } = useToast();
@@ -22,7 +17,7 @@ export default function RulesPanel() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/rules", { headers: adminHeaders() });
+      const res = await adminFetch("/api/admin/rules");
       if (res.status === 401) {
         showToast("Code admin requis (variable ADMIN_SECRET sur le serveur).", "error");
         setLoading(false);
@@ -41,7 +36,7 @@ export default function RulesPanel() {
 
   const loadPartners = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/partners", { headers: adminHeaders() });
+      const res = await adminFetch("/api/admin/partners");
       if (res.status === 401) return;
       if (!res.ok) return;
       const data = await res.json();
@@ -59,9 +54,9 @@ export default function RulesPanel() {
   async function saveRules() {
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/rules", {
+      const res = await adminFetch("/api/admin/rules", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", ...adminHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fees, destinations }),
       });
       if (res.status === 401) {
@@ -83,9 +78,9 @@ export default function RulesPanel() {
 
   async function savePartner(p) {
     try {
-      const res = await fetch(`/api/partners/${encodeURIComponent(p.id)}`, {
+      const res = await adminFetch(`/api/partners/${encodeURIComponent(p.id)}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...adminHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: p.name,
           route: p.route,

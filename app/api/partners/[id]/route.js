@@ -4,7 +4,7 @@ import { updateRecords, deleteRecords, isInsforgeConfigured } from "@/lib/insfor
 
 /** Mise à jour partenaire (conditions, WhatsApp, adresse, contact). */
 export async function PATCH(request, { params }) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "partners" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });
@@ -40,7 +40,7 @@ export async function PATCH(request, { params }) {
 
 /** Suppression partenaire (colis : partner_id passé à NULL si FK ON DELETE SET NULL). */
 export async function DELETE(request, { params }) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "partners" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });

@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { deleteRecords, isInsforgeConfigured } from "@/lib/insforge";
 
 export async function DELETE(request, { params }) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "notes" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });

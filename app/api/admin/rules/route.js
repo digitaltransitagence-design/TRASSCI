@@ -31,7 +31,7 @@ async function getAllSettings() {
 
 /** Liste complète (admin) : destinations + frais */
 export async function GET(request) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "rules" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({
@@ -64,7 +64,7 @@ export async function GET(request) {
 
 /** Mise à jour frais et/ou destinations */
 export async function PUT(request) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "rules" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json(

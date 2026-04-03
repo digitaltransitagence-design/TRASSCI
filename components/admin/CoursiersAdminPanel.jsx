@@ -4,12 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import { Bike, Trash2 } from "lucide-react";
 import { useToast } from "@/components/providers/ToastProvider";
-
-function adminHeaders() {
-  if (typeof window === "undefined") return {};
-  const s = sessionStorage.getItem("trass_admin_secret");
-  return s ? { "x-admin-secret": s } : {};
-}
+import { adminFetch } from "@/components/admin/adminFetch";
 
 export default function CoursiersAdminPanel({ onChanged }) {
   const { showToast } = useToast();
@@ -43,9 +38,9 @@ export default function CoursiersAdminPanel({ onChanged }) {
   async function createCoursier(e) {
     e.preventDefault();
     try {
-      const res = await fetch("/api/admin/coursiers", {
+      const res = await adminFetch("/api/admin/coursiers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...adminHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       if (res.status === 401) {
@@ -65,9 +60,9 @@ export default function CoursiersAdminPanel({ onChanged }) {
 
   async function updateField(c, field, value) {
     try {
-      const res = await fetch(`/api/admin/coursiers/${encodeURIComponent(c.id)}`, {
+      const res = await adminFetch(`/api/admin/coursiers/${encodeURIComponent(c.id)}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", ...adminHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [field]: value }),
       });
       if (res.status === 401) {
@@ -86,9 +81,8 @@ export default function CoursiersAdminPanel({ onChanged }) {
   async function remove(c) {
     if (!window.confirm(`Supprimer le coursier ${c.id} ?`)) return;
     try {
-      const res = await fetch(`/api/admin/coursiers/${encodeURIComponent(c.id)}`, {
+      const res = await adminFetch(`/api/admin/coursiers/${encodeURIComponent(c.id)}`, {
         method: "DELETE",
-        headers: adminHeaders(),
       });
       if (res.status === 401) {
         showToast("Code admin requis.", "error");

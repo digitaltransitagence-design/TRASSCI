@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { createRecords, isInsforgeConfigured } from "@/lib/insforge";
 
 export async function POST(request) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "coursiers" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });

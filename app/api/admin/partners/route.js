@@ -8,7 +8,7 @@ import {
 
 /** Liste complète des partenaires (y compris inactifs) pour configuration. */
 export async function GET(request) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "partners" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });
@@ -30,7 +30,7 @@ export async function GET(request) {
 
 /** Création partenaire (id unique type P-XXX). */
 export async function POST(request) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "partners" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });

@@ -7,7 +7,7 @@ import {
 } from "@/lib/insforge";
 
 export async function GET(request) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "notes" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });
@@ -28,7 +28,7 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  const denied = requireAdmin(request);
+  const denied = requireAdmin(request, { permission: "notes" });
   if (denied) return denied;
   if (!isInsforgeConfigured()) {
     return NextResponse.json({ error: "Insforge non configuré" }, { status: 503 });

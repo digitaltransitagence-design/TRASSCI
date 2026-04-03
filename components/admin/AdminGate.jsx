@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-const STORAGE_KEY = "trass_admin_secret";
+import { adminFetch } from "@/components/admin/adminFetch";
 
 /**
- * Redirige vers /admin/login si ADMIN_SECRET est défini sur le serveur
- * et qu’aucun code n’est mémorisé (ou code invalide).
+ * Vérifie la session cookie (/api/admin/me) ou mode ouvert sans ADMIN_SECRET.
  */
 export default function AdminGate({ children }) {
   const router = useRouter();
@@ -18,28 +16,29 @@ export default function AdminGate({ children }) {
 
     async function run() {
       try {
-        const s = await fetch("/api/admin/session", { cache: "no-store" });
-        const { adminSecretRequired } = await s.json();
-        if (!adminSecretRequired) {
+        const me = await adminFetch("/api/admin/me", { cache: "no-store" });
+        if (me.ok) {
           if (!cancelled) setStatus("ok");
           return;
         }
-        const stored = sessionStorage.getItem(STORAGE_KEY);
-        if (!stored) {
-          router.replace("/admin/login");
-          return;
+
+        const s = await fetch("/api/admin/session", { cache: "no-store" }).then((r) =>
+          r.json()
+        );
+        if (!s.adminSecretRequired) {
+          await adminFetch("/api/admin/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          });
+          const me2 = await adminFetch("/api/admin/me", { cache: "no-store" });
+          if (me2.ok) {
+            if (!cancelled) setStatus("ok");
+            return;
+          }
         }
-        const v = await fetch("/api/admin/auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ secret: stored }),
-        });
-        if (!v.ok) {
-          sessionStorage.removeItem(STORAGE_KEY);
-          router.replace("/admin/login");
-          return;
-        }
-        if (!cancelled) setStatus("ok");
+
+        if (!cancelled) router.replace("/admin/login");
       } catch {
         if (!cancelled) setStatus("error");
       }

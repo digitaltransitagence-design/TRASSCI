@@ -20,6 +20,7 @@ import {
   ListChecks,
   CalendarDays,
   LogOut,
+  Shield,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import RulesPanel from "@/components/admin/RulesPanel";
@@ -28,7 +29,10 @@ import MessagesPanel from "@/components/admin/MessagesPanel";
 import DeliveryStatusPanel from "@/components/admin/DeliveryStatusPanel";
 import ShippingCalendarPanel from "@/components/admin/ShippingCalendarPanel";
 import CoursiersAdminPanel from "@/components/admin/CoursiersAdminPanel";
-import AdminSecretBanner from "@/components/admin/AdminSecretBanner";
+import AdminAccessPanel from "@/components/admin/AdminAccessPanel";
+import AdminOverviewAnalytics from "@/components/admin/AdminOverviewAnalytics";
+import { adminFetch } from "@/components/admin/adminFetch";
+import { TAB_PERMISSION } from "@/lib/admin-permissions";
 import { useToast } from "@/components/providers/ToastProvider";
 
 const STORAGE_ROLE = "trass_admin_role";
@@ -45,20 +49,29 @@ const TAB_TITLES = {
   messages: "Messages & alertes",
   delivery_status: "Statut de livraison",
   calendar: "Calendrier des envois",
+  access: "Équipes & accès",
   gare_ops: "Embarquement",
   gare_delivery: "Remise client",
 };
 
-function adminHeaders() {
-  if (typeof window === "undefined") return {};
-  const s = sessionStorage.getItem("trass_admin_secret");
-  return s ? { "x-admin-secret": s } : {};
+function canAccessTab(me, role, tabKey) {
+  if (role === "AGENT_GARE") return tabKey === "gare_ops" || tabKey === "gare_delivery";
+  if (role !== "SUPER_ADMIN") return false;
+  if (tabKey === "access") {
+    if (me == null) return false;
+    return Boolean(me.isSuperAdmin);
+  }
+  if (me == null || me.openMode) return true;
+  if (me.isSuperAdmin) return true;
+  const need = TAB_PERMISSION[tabKey];
+  if (!need) return true;
+  return (me.permissions || []).includes(need);
 }
 
 async function patchPackage(id, body) {
-  const res = await fetch(`/api/packages/${encodeURIComponent(id)}`, {
+  const res = await adminFetch(`/api/packages/${encodeURIComponent(id)}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", ...adminHeaders() },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -83,14 +96,20 @@ export default function AdminDashboard() {
   const [loadingReport, setLoadingReport] = useState(false);
   const [trafficById, setTrafficById] = useState({});
   const [loadingTraffic, setLoadingTraffic] = useState({});
+  /** Session serveur (/api/admin/me) — permissions équipe */
+  const [me, setMe] = useState(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [pr, pa, co] = await Promise.all([
+      const [pr, pa, co, meRes] = await Promise.all([
         fetch("/api/packages", { cache: "no-store" }),
         fetch("/api/partners", { cache: "no-store" }),
         fetch("/api/coursiers", { cache: "no-store" }),
+        adminFetch("/api/admin/me"),
       ]);
+      if (meRes.ok) {
+        setMe(await meRes.json());
+      }
       if (pr.status === 503) {
         setApiDown(true);
         setLoadError(null);
@@ -141,6 +160,27 @@ export default function AdminDashboard() {
     if (role === "AGENT_GARE") setTab("gare_ops");
     else setTab("dispatch");
   }, [role]);
+
+  useEffect(() => {
+    if (role !== "SUPER_ADMIN" || me == null) return;
+    if (!canAccessTab(me, role, tab)) {
+      const order = [
+        "admin_overview",
+        "dispatch",
+        "hub",
+        "rules",
+        "partners_admin",
+        "coursiers_admin",
+        "messages",
+        "delivery_status",
+        "calendar",
+        "ai_dashboard",
+        "access",
+      ];
+      const next = order.find((k) => canAccessTab(me, role, k));
+      if (next) setTab(next);
+    }
+  }, [me, role, tab]);
 
   const stats = {
     total: packages.length,
@@ -381,132 +421,166 @@ export default function AdminDashboard() {
               <p className="mb-2 ml-2 mt-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Opérations
               </p>
-              <button
-                type="button"
-                onClick={() => setTab("dispatch")}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
-                  tab === "dispatch"
-                    ? "bg-blue-800 text-white"
-                    : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <Bike className="h-5 w-5" />
-                Dispatch coursiers
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("hub")}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
-                  tab === "hub"
-                    ? "bg-blue-800 text-white"
-                    : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <Activity className="h-5 w-5" />
-                Centre de tri
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("rules")}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
-                  tab === "rules"
-                    ? "bg-teal-700 text-white"
-                    : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <Settings className="h-5 w-5" />
-                Règles & tarifs
-              </button>
+              {canAccessTab(me, role, "dispatch") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("dispatch")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "dispatch"
+                      ? "bg-blue-800 text-white"
+                      : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <Bike className="h-5 w-5" />
+                  Dispatch coursiers
+                </button>
+              )}
+              {canAccessTab(me, role, "hub") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("hub")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "hub"
+                      ? "bg-blue-800 text-white"
+                      : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <Activity className="h-5 w-5" />
+                  Centre de tri
+                </button>
+              )}
+              {canAccessTab(me, role, "rules") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("rules")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "rules"
+                      ? "bg-teal-700 text-white"
+                      : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <Settings className="h-5 w-5" />
+                  Règles & tarifs
+                </button>
+              )}
               <p className="mb-2 ml-2 mt-6 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Administration
               </p>
-              <button
-                type="button"
-                onClick={() => setTab("admin_overview")}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
-                  tab === "admin_overview"
-                    ? "bg-slate-700 text-white"
-                    : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <LayoutDashboard className="h-5 w-5" />
-                Vue d’ensemble
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("partners_admin")}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
-                  tab === "partners_admin"
-                    ? "bg-emerald-800 text-white"
-                    : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <Users className="h-5 w-5" />
-                Partenaires
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("coursiers_admin")}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
-                  tab === "coursiers_admin"
-                    ? "bg-violet-800 text-white"
-                    : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <Bike className="h-5 w-5" />
-                Coursiers
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("messages")}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
-                  tab === "messages"
-                    ? "bg-cyan-800 text-white"
-                    : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <MessageSquare className="h-5 w-5" />
-                Messages
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("delivery_status")}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
-                  tab === "delivery_status"
-                    ? "bg-amber-800 text-white"
-                    : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <ListChecks className="h-5 w-5" />
-                Statut livraison
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("calendar")}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
-                  tab === "calendar"
-                    ? "bg-orange-800 text-white"
-                    : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <CalendarDays className="h-5 w-5" />
-                Calendrier envois
-              </button>
+              {canAccessTab(me, role, "admin_overview") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("admin_overview")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "admin_overview"
+                      ? "bg-slate-700 text-white"
+                      : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <LayoutDashboard className="h-5 w-5" />
+                  Vue d’ensemble
+                </button>
+              )}
+              {canAccessTab(me, role, "access") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("access")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "access"
+                      ? "bg-slate-600 text-white"
+                      : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <Shield className="h-5 w-5" />
+                  Équipes & accès
+                </button>
+              )}
+              {canAccessTab(me, role, "partners_admin") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("partners_admin")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "partners_admin"
+                      ? "bg-emerald-800 text-white"
+                      : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <Users className="h-5 w-5" />
+                  Partenaires
+                </button>
+              )}
+              {canAccessTab(me, role, "coursiers_admin") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("coursiers_admin")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "coursiers_admin"
+                      ? "bg-violet-800 text-white"
+                      : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <Bike className="h-5 w-5" />
+                  Coursiers
+                </button>
+              )}
+              {canAccessTab(me, role, "messages") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("messages")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "messages"
+                      ? "bg-cyan-800 text-white"
+                      : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <MessageSquare className="h-5 w-5" />
+                  Messages
+                </button>
+              )}
+              {canAccessTab(me, role, "delivery_status") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("delivery_status")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "delivery_status"
+                      ? "bg-amber-800 text-white"
+                      : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <ListChecks className="h-5 w-5" />
+                  Statut livraison
+                </button>
+              )}
+              {canAccessTab(me, role, "calendar") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("calendar")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "calendar"
+                      ? "bg-orange-800 text-white"
+                      : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <CalendarDays className="h-5 w-5" />
+                  Calendrier envois
+                </button>
+              )}
               <p className="mb-2 ml-2 mt-6 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 IA
               </p>
-              <button
-                type="button"
-                onClick={() => setTab("ai_dashboard")}
-                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
-                  tab === "ai_dashboard"
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
-                    : "text-indigo-300 hover:bg-slate-800"
-                }`}
-              >
-                <BarChart3 className="h-5 w-5" />
-                Tableau IA ✨
-              </button>
+              {canAccessTab(me, role, "ai_dashboard") && (
+                <button
+                  type="button"
+                  onClick={() => setTab("ai_dashboard")}
+                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                    tab === "ai_dashboard"
+                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
+                      : "text-indigo-300 hover:bg-slate-800"
+                  }`}
+                >
+                  <BarChart3 className="h-5 w-5" />
+                  Tableau IA ✨
+                </button>
+              )}
             </>
           )}
           {role === "AGENT_GARE" && (
@@ -548,7 +622,12 @@ export default function AdminDashboard() {
           </Link>
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
+              try {
+                await adminFetch("/api/admin/logout", { method: "POST" });
+              } catch {
+                /* ignore */
+              }
               try {
                 sessionStorage.removeItem("trass_admin_secret");
               } catch {
@@ -589,15 +668,6 @@ export default function AdminDashboard() {
           )}
         </header>
 
-        {role === "SUPER_ADMIN" && (
-          <div className="border-b border-slate-200 bg-white px-6 py-4">
-            <AdminSecretBanner
-              onMemorized={refresh}
-              successHint="Ce code s’applique aux actions sensibles : règles & tarifs, partenaires, notes internes, coursiers."
-            />
-          </div>
-        )}
-
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">
           {apiDown && (
             <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
@@ -626,14 +696,19 @@ export default function AdminDashboard() {
                 manquante, exécutez dans Insforge :{" "}
                 <code className="rounded bg-white px-1">sql/schema.sql</code> ou les migrations{" "}
                 <code className="rounded bg-white px-1">migration_v2_rules.sql</code>,{" "}
-                <code className="rounded bg-white px-1">migration_v3_features.sql</code>.
+                <code className="rounded bg-white px-1">migration_v3_features.sql</code>,{" "}
+                <code className="rounded bg-white px-1">migration_v4_admin_rbac.sql</code>.
               </p>
             </div>
           )}
 
-          {role === "SUPER_ADMIN" && tab === "rules" && <RulesPanel />}
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "rules") &&
+            tab === "rules" && <RulesPanel />}
 
-          {role === "SUPER_ADMIN" && tab === "admin_overview" && (
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "admin_overview") &&
+            tab === "admin_overview" && (
             <div className="mx-auto max-w-5xl animate-fade-in">
               <p className="mb-6 text-slate-600">
                 Tableau général — chiffres colis, CA, file logistique et réseau partenaires /
@@ -700,6 +775,8 @@ export default function AdminDashboard() {
                   <p className="mt-1 text-2xl font-extrabold text-indigo-900">{stats.coursiersTotal}</p>
                 </div>
               </div>
+
+              <AdminOverviewAnalytics />
 
               <p className="mb-4 text-sm font-bold text-slate-700">Accès rapide aux modules</p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -769,31 +846,45 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {role === "SUPER_ADMIN" && tab === "partners_admin" && (
-            <PartnersAdminPanel onChanged={refresh} />
-          )}
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "partners_admin") &&
+            tab === "partners_admin" && (
+              <PartnersAdminPanel onChanged={refresh} />
+            )}
 
-          {role === "SUPER_ADMIN" && tab === "coursiers_admin" && (
-            <CoursiersAdminPanel onChanged={refresh} />
-          )}
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "coursiers_admin") &&
+            tab === "coursiers_admin" && (
+              <CoursiersAdminPanel onChanged={refresh} />
+            )}
 
-          {role === "SUPER_ADMIN" && tab === "messages" && (
-            <MessagesPanel packages={packages} />
-          )}
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "messages") &&
+            tab === "messages" && <MessagesPanel packages={packages} />}
 
-          {role === "SUPER_ADMIN" && tab === "delivery_status" && (
-            <DeliveryStatusPanel packages={packages} />
-          )}
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "delivery_status") &&
+            tab === "delivery_status" && (
+              <DeliveryStatusPanel packages={packages} />
+            )}
 
-          {role === "SUPER_ADMIN" && tab === "calendar" && (
-            <ShippingCalendarPanel
-              packages={packages}
-              partners={partners}
-              coursiers={coursiers}
-            />
-          )}
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "calendar") &&
+            tab === "calendar" && (
+              <ShippingCalendarPanel
+                packages={packages}
+                partners={partners}
+                coursiers={coursiers}
+              />
+            )}
 
-          {role === "SUPER_ADMIN" && tab === "ai_dashboard" && (
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "access") &&
+            tab === "access" && <AdminAccessPanel />}
+
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "ai_dashboard") &&
+            tab === "ai_dashboard" && (
             <div className="mx-auto max-w-5xl space-y-6 animate-fade-in">
               <div className="relative flex flex-col justify-between gap-6 overflow-hidden rounded-3xl bg-indigo-900 p-8 text-white shadow-xl md:flex-row md:items-center">
                 <div className="relative z-10">
@@ -830,7 +921,9 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {role === "SUPER_ADMIN" && tab === "dispatch" && (
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "dispatch") &&
+            tab === "dispatch" && (
             <div className="grid animate-fade-in gap-6 lg:grid-cols-2">
               <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div className="flex justify-between border-b border-slate-100 bg-slate-50 p-4 font-bold text-slate-700">
@@ -962,7 +1055,9 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {role === "SUPER_ADMIN" && tab === "hub" && (
+          {role === "SUPER_ADMIN" &&
+            canAccessTab(me, role, "hub") &&
+            tab === "hub" && (
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm animate-fade-in">
               <div className="border-b border-slate-100 p-6">
                 <h3 className="font-bold text-slate-800">Centre de tri</h3>

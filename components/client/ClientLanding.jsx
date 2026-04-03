@@ -34,7 +34,6 @@ export default function ClientLanding() {
   const { showToast } = useToast();
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [authStatusLoaded, setAuthStatusLoaded] = useState(false);
-  const [resendEnabled, setResendEnabled] = useState(false);
   const [tab, setTab] = useState("login");
   const [loading, setLoading] = useState(false);
   const [guideSending, setGuideSending] = useState(false);
@@ -50,11 +49,9 @@ export default function ClientLanding() {
       .then((r) => r.json())
       .then((d) => {
         setGoogleEnabled(!!d.google);
-        setResendEnabled(!!d.resend);
       })
       .catch(() => {
         setGoogleEnabled(false);
-        setResendEnabled(false);
       })
       .finally(() => setAuthStatusLoaded(true));
   }, []);
@@ -231,31 +228,8 @@ export default function ClientLanding() {
                 className="w-full sm:w-auto"
               >
                 <Mail className="h-4 w-4" aria-hidden />
-                {guideSending ? "Envoi…" : "M&apos;envoyer le guide"}
+                {guideSending ? "Envoi…" : "M'envoyer le guide"}
               </Button>
-              {resendEnabled && (
-                <p className="mt-3 text-xs leading-relaxed text-slate-500">
-                  Côté équipe, les envois sont consultables sur le{" "}
-                  <a
-                    href="https://resend.com/emails"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-blue-700 underline"
-                  >
-                    tableau Resend
-                  </a>{" "}
-                  (aperçu, texte, HTML, journaux —{" "}
-                  <a
-                    href="https://resend.com/docs/dashboard/emails/introduction"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-700 underline"
-                  >
-                    documentation
-                  </a>
-                  ).
-                </p>
-              )}
             </div>
           </div>
         ) : (

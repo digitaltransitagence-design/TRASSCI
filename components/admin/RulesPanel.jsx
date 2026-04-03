@@ -19,6 +19,9 @@ export default function RulesPanel() {
   const [saving, setSaving] = useState(false);
   const [adminSecretInput, setAdminSecretInput] = useState("");
   const [editingPartner, setEditingPartner] = useState(null);
+  /** null = chargement, false = serveur sans ADMIN_SECRET, true = code obligatoire */
+  const [adminSecretRequired, setAdminSecretRequired] = useState(null);
+  const [hasStoredSecret, setHasStoredSecret] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,10 +57,19 @@ export default function RulesPanel() {
 
   useEffect(() => {
     try {
-      setAdminSecretInput(sessionStorage.getItem("trass_admin_secret") || "");
+      const s = sessionStorage.getItem("trass_admin_secret") || "";
+      setAdminSecretInput(s);
+      setHasStoredSecret(Boolean(s.trim()));
     } catch {
       /* ignore */
     }
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/session", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setAdminSecretRequired(Boolean(d.adminSecretRequired)))
+      .catch(() => setAdminSecretRequired(true));
   }, []);
 
   useEffect(() => {
@@ -67,6 +79,7 @@ export default function RulesPanel() {
 
   function saveSecret() {
     sessionStorage.setItem("trass_admin_secret", adminSecretInput.trim());
+    setHasStoredSecret(Boolean(adminSecretInput.trim()));
     showToast("Code enregistré pour cette session.", "success");
     load();
     loadPartners();
@@ -131,23 +144,60 @@ export default function RulesPanel() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-10 animate-fade-in">
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-        <strong>Code admin (optionnel) :</strong> si{" "}
-        <code className="rounded bg-white px-1">ADMIN_SECRET</code> est défini sur
-        le serveur, saisissez la même valeur pour modifier tarifs et partenaires.
-        <div className="mt-3 flex flex-wrap gap-2">
-          <input
-            type="password"
-            className="min-w-[200px] flex-1 rounded-lg border border-amber-300 px-3 py-2"
-            placeholder="Code secret admin"
-            value={adminSecretInput}
-            onChange={(e) => setAdminSecretInput(e.target.value)}
-          />
-          <Button type="button" variant="outline" onClick={saveSecret}>
-            Mémoriser
-          </Button>
+      {adminSecretRequired === null && (
+        <p className="text-xs text-slate-500">Vérification du mode sécurité serveur…</p>
+      )}
+
+      {adminSecretRequired === false && (
+        <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          Mode serveur sans <code className="rounded bg-white px-1">ADMIN_SECRET</code> : les
+          tarifs et partenaires sont modifiables sans code (développement uniquement en prod
+          sécurisée).
+        </p>
+      )}
+
+      {adminSecretRequired === true && (
+        <div
+          className={`rounded-2xl border p-4 text-sm ${
+            hasStoredSecret
+              ? "border-green-300 bg-green-50 text-green-950"
+              : "border-amber-300 bg-amber-50 text-amber-950"
+          }`}
+        >
+          {hasStoredSecret ? (
+            <>
+              <strong>Code admin actif.</strong> Vous avez déjà le bon code (connexion{" "}
+              <code className="rounded bg-white/80 px-1">/admin/login</code> ou bouton
+              Mémoriser). Vous pouvez modifier les tarifs et partenaires ci-dessous.
+            </>
+          ) : (
+            <>
+              <strong>Code requis pour enregistrer.</strong> C&apos;est la{" "}
+              <strong>même valeur</strong> que la variable{" "}
+              <code className="rounded bg-white px-1">ADMIN_SECRET</code> sur Vercel / serveur
+              — identique à celle de la page{" "}
+              <strong>Connexion administration</strong> (<code className="rounded bg-white px-1">/admin/login</code>
+              ). Saisissez-la puis cliquez <strong>Mémoriser</strong>.
+            </>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <input
+              type="password"
+              className={`min-w-[200px] flex-1 rounded-lg border px-3 py-2 ${
+                hasStoredSecret
+                  ? "border-green-300 bg-white"
+                  : "border-amber-300 bg-white"
+              }`}
+              placeholder="Même code que /admin/login"
+              value={adminSecretInput}
+              onChange={(e) => setAdminSecretInput(e.target.value)}
+            />
+            <Button type="button" variant="outline" onClick={saveSecret}>
+              Mémoriser
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-4 text-lg font-extrabold text-slate-800">Frais fixes</h3>

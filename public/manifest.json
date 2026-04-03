@@ -1,0 +1,10 @@
+{
+  "name": "Trass CI",
+  "short_name": "Trass CI",
+  "description": "Logistique Abidjan — Intérieur",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "lang": "fr"
+}

@@ -2,12 +2,43 @@
 
 import { useMemo, useState } from "react";
 import { STATUS_FLOW } from "@/lib/constants";
-import { Filter } from "lucide-react";
+import { Filter, Search, Download } from "lucide-react";
+import Button from "@/components/ui/Button";
+import { useToast } from "@/components/providers/ToastProvider";
 
 const STATUS_MAP = Object.fromEntries(STATUS_FLOW.map((s) => [s.id, s]));
 
+function matchesSearch(p, q) {
+  if (!q.trim()) return true;
+  const s = q.trim().toLowerCase();
+  const hay = [
+    p.id,
+    p.sender_name,
+    p.sender_phone,
+    p.receiver_name,
+    p.receiver_phone,
+    p.destination,
+    p.issue,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(s);
+}
+
+function toCsvRow(cells) {
+  return cells
+    .map((c) => {
+      const t = String(c ?? "").replace(/"/g, '""');
+      return `"${t}"`;
+    })
+    .join(";");
+}
+
 export default function DeliveryStatusPanel({ packages = [] }) {
+  const { showToast } = useToast();
   const [filter, setFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
 
   const rows = useMemo(() => {
     let list = [...packages];
@@ -17,40 +48,111 @@ export default function DeliveryStatusPanel({ packages = [] }) {
       return db - da;
     });
     if (filter !== "ALL") list = list.filter((p) => p.status === filter);
+    list = list.filter((p) => matchesSearch(p, search));
     return list;
-  }, [packages, filter]);
+  }, [packages, filter, search]);
+
+  function exportCsv() {
+    const header = [
+      "id",
+      "statut",
+      "destination",
+      "expediteur",
+      "tel_expediteur",
+      "destinataire",
+      "tel_destinataire",
+      "prix_fcfa",
+      "cree_le",
+      "incident",
+    ];
+    const lines = [toCsvRow(header)];
+    for (const p of rows) {
+      lines.push(
+        toCsvRow([
+          p.id,
+          p.status,
+          p.destination,
+          p.sender_name,
+          p.sender_phone,
+          p.receiver_name,
+          p.receiver_phone,
+          p.price,
+          p.created_at
+            ? new Date(p.created_at).toISOString()
+            : "",
+          p.issue || "",
+        ])
+      );
+    }
+    const blob = new Blob(["\ufeff" + lines.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `trass-colis-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Export CSV téléchargé.", "success");
+  }
 
   return (
     <div className="mx-auto max-w-6xl animate-fade-in">
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <span className="flex items-center gap-2 text-sm font-bold text-slate-700">
-          <Filter className="h-4 w-4" />
-          Filtrer par statut
-        </span>
-        <select
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end lg:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex items-center gap-2 text-sm font-bold text-slate-700">
+            <Filter className="h-4 w-4" />
+            Statut
+          </span>
+          <select
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="ALL">Tous ({packages.length})</option>
+            {STATUS_FLOW.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label} (
+                {packages.filter((p) => p.status === s.id).length})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:max-w-md">
+          <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+            <Search className="h-4 w-4 shrink-0" />
+            Recherche (n°, téléphone, ville…)
+          </label>
+          <input
+            type="search"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+            placeholder="Ex. TRASS-1234, 07, Bouaké…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="shrink-0 gap-2"
+          disabled={rows.length === 0}
+          onClick={exportCsv}
         >
-          <option value="ALL">Tous ({packages.length})</option>
-          {STATUS_FLOW.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label} (
-              {packages.filter((p) => p.status === s.id).length})
-            </option>
-          ))}
-        </select>
+          <Download className="h-4 w-4" />
+          Export CSV ({rows.length})
+        </Button>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full min-w-[920px] text-left text-sm">
             <thead className="bg-slate-50 text-xs font-bold uppercase text-slate-500">
               <tr>
                 <th className="p-4">Colis</th>
                 <th className="p-4">Statut livraison</th>
                 <th className="p-4">Destination</th>
                 <th className="p-4">Expéditeur</th>
+                <th className="p-4">Destinataire</th>
                 <th className="p-4">Créé le</th>
                 <th className="p-4">Incident</th>
               </tr>
@@ -70,7 +172,14 @@ export default function DeliveryStatusPanel({ packages = [] }) {
                       <span className="mt-1 block text-[10px] text-slate-500">{st.desc}</span>
                     </td>
                     <td className="p-4 font-medium">{p.destination}</td>
-                    <td className="p-4 text-slate-700">{p.sender_name}</td>
+                    <td className="p-4 text-slate-700">
+                      <span className="block">{p.sender_name}</span>
+                      <span className="text-xs text-slate-500">{p.sender_phone}</span>
+                    </td>
+                    <td className="p-4 text-slate-700">
+                      <span className="block">{p.receiver_name || "—"}</span>
+                      <span className="text-xs text-slate-500">{p.receiver_phone}</span>
+                    </td>
                     <td className="p-4 text-slate-600">
                       {p.created_at
                         ? new Date(p.created_at).toLocaleString("fr-FR")

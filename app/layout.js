@@ -18,6 +18,8 @@ export const metadata = {
   title: "Trass CI — Logistique Abidjan → Intérieur",
   description:
     "Plateforme logistique end-to-end en Côte d'Ivoire : ramassage, suivi et remise en gare.",
+  manifest: "/manifest.json",
+  appleWebApp: { capable: true, title: "Trass CI" },
 };
 
 export default function RootLayout({ children }) {

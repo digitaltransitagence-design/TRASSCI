@@ -25,6 +25,7 @@ import PartnersAdminPanel from "@/components/admin/PartnersAdminPanel";
 import MessagesPanel from "@/components/admin/MessagesPanel";
 import DeliveryStatusPanel from "@/components/admin/DeliveryStatusPanel";
 import ShippingCalendarPanel from "@/components/admin/ShippingCalendarPanel";
+import CoursiersAdminPanel from "@/components/admin/CoursiersAdminPanel";
 import { useToast } from "@/components/providers/ToastProvider";
 
 const STORAGE_ROLE = "trass_admin_role";
@@ -37,6 +38,7 @@ const TAB_TITLES = {
   ai_dashboard: "Tableau IA",
   admin_overview: "Administration — vue d’ensemble",
   partners_admin: "Partenaires",
+  coursiers_admin: "Coursiers",
   messages: "Messages & alertes",
   delivery_status: "Statut de livraison",
   calendar: "Calendrier des envois",
@@ -44,10 +46,16 @@ const TAB_TITLES = {
   gare_delivery: "Remise client",
 };
 
+function adminHeaders() {
+  if (typeof window === "undefined") return {};
+  const s = sessionStorage.getItem("trass_admin_secret");
+  return s ? { "x-admin-secret": s } : {};
+}
+
 async function patchPackage(id, body) {
   const res = await fetch(`/api/packages/${encodeURIComponent(id)}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...adminHeaders() },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -417,6 +425,18 @@ export default function AdminDashboard() {
               </button>
               <button
                 type="button"
+                onClick={() => setTab("coursiers_admin")}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                  tab === "coursiers_admin"
+                    ? "bg-violet-800 text-white"
+                    : "text-slate-400 hover:bg-slate-800"
+                }`}
+              >
+                <Bike className="h-5 w-5" />
+                Coursiers
+              </button>
+              <button
+                type="button"
                 onClick={() => setTab("messages")}
                 className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
                   tab === "messages"
@@ -538,7 +558,8 @@ export default function AdminDashboard() {
             <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
               Configurez Insforge (variables d&apos;environnement) et importez{" "}
               <code className="rounded bg-white px-1">sql/schema.sql</code> (et{" "}
-              <code className="rounded bg-white px-1">migration_v2_rules.sql</code> si
+              <code className="rounded bg-white px-1">migration_v2_rules.sql</code> puis{" "}
+              <code className="rounded bg-white px-1">migration_v3_features.sql</code> si
               base déjà créée).
             </div>
           )}
@@ -558,6 +579,13 @@ export default function AdminDashboard() {
                     desc: "Gares, contacts, WhatsApp, conditions",
                     icon: Users,
                     color: "border-emerald-200 bg-emerald-50 text-emerald-900",
+                  },
+                  {
+                    key: "coursiers_admin",
+                    title: "Coursiers",
+                    desc: "Ramassages Abidjan — équipe terrain",
+                    icon: Bike,
+                    color: "border-violet-200 bg-violet-50 text-violet-900",
                   },
                   {
                     key: "messages",
@@ -625,6 +653,10 @@ export default function AdminDashboard() {
           )}
 
           {role === "SUPER_ADMIN" && tab === "partners_admin" && <PartnersAdminPanel />}
+
+          {role === "SUPER_ADMIN" && tab === "coursiers_admin" && (
+            <CoursiersAdminPanel onChanged={refresh} />
+          )}
 
           {role === "SUPER_ADMIN" && tab === "messages" && (
             <MessagesPanel packages={packages} />

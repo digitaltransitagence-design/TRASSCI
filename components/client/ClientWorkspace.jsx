@@ -14,6 +14,8 @@ import {
   AlertTriangle,
   Sparkles,
   ImagePlus,
+  Copy,
+  Share2,
 } from "lucide-react";
 import { NATURE_OPTIONS } from "@/lib/constants";
 import Input from "@/components/ui/Input";
@@ -290,6 +292,43 @@ export default function ClientWorkspace() {
     }
   }
 
+  async function copyTrackingId() {
+    const id = tracked?.package?.id;
+    if (!id) return;
+    try {
+      await navigator.clipboard.writeText(id);
+      showToast("Numéro de suivi copié.", "success");
+    } catch {
+      showToast("Copie impossible sur ce navigateur.", "error");
+    }
+  }
+
+  async function shareTrackingLink() {
+    const id = tracked?.package?.id;
+    if (!id) return;
+    const url = `${typeof window !== "undefined" ? window.location.origin : ""}/client?track=${encodeURIComponent(id)}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Suivi Trass CI — ${id}`,
+          text: `Suivez le colis ${id} sur Trass CI.`,
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        showToast("Lien de suivi copié.", "success");
+      }
+    } catch (e) {
+      if (e?.name === "AbortError") return;
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast("Lien copié.", "success");
+      } catch {
+        showToast("Partage indisponible.", "error");
+      }
+    }
+  }
+
   async function handleRate(stars) {
     if (!tracked?.package?.id || tracked.package.rating != null) return;
     try {
@@ -302,12 +341,15 @@ export default function ClientWorkspace() {
           author: "Client",
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Erreur");
+      }
       const data = await res.json();
       setTracked(data);
       showToast("Merci pour votre avis !", "success");
-    } catch {
-      showToast("Erreur enregistrement note.", "error");
+    } catch (e) {
+      showToast(e.message || "Erreur enregistrement note.", "error");
     }
   }
 
@@ -333,9 +375,9 @@ export default function ClientWorkspace() {
         {apiDown && (
           <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
             <strong>Serveur :</strong> configurez Insforge et exécutez{" "}
-            <code className="rounded bg-white px-1">sql/schema.sql</code> puis{" "}
-            <code className="rounded bg-white px-1">sql/migration_v2_rules.sql</code>
-            .
+            <code className="rounded bg-white px-1">sql/schema.sql</code>,{" "}
+            <code className="rounded bg-white px-1">migration_v2_rules.sql</code> et{" "}
+            <code className="rounded bg-white px-1">migration_v3_features.sql</code> si besoin.
           </div>
         )}
 
@@ -681,7 +723,7 @@ export default function ClientWorkspace() {
                     Attention : {pkg.issue}
                   </div>
                 )}
-                <div className="flex items-center justify-between bg-slate-800 p-6 text-white">
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-800 p-6 text-white">
                   <div>
                     <p className="mb-1 text-xs font-bold uppercase tracking-wider text-blue-300">
                       Suivi
@@ -690,7 +732,25 @@ export default function ClientWorkspace() {
                       {pkg.id}
                     </h2>
                   </div>
-                  <Barcode className="h-8 w-8 opacity-50" />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={copyTrackingId}
+                      className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold transition hover:bg-white/20"
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={shareTrackingLink}
+                      className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold transition hover:bg-white/20"
+                    >
+                      <Share2 className="h-4 w-4" />
+                      Partager
+                    </button>
+                    <Barcode className="hidden h-8 w-8 opacity-50 sm:block" />
+                  </div>
                 </div>
                 {pkg.photo_url && (
                   <div className="border-b border-slate-100 bg-slate-50 p-4">

@@ -39,6 +39,24 @@ export async function POST(request) {
     });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: e.message || "Erreur" }, { status: 502 });
+    const msg = String(e?.message || e || "");
+
+    /* Resend (compte sans domaine vérifié) : envois de test limités à l’e-mail du compte. */
+    if (
+      /only send testing emails|verify a domain|testing emails to your own/i.test(
+        msg
+      )
+    ) {
+      return NextResponse.json({
+        ok: true,
+        mode: "stub",
+        reason: "resend_sandbox",
+        message:
+          "Resend (mode test) : sans domaine vérifié, l’envoi ne peut aller qu’à l’adresse du compte Resend — ou vérifiez un domaine sur resend.com/domains et définissez RESEND_FROM avec une adresse @ce-domaine.",
+        guide: getClientGuidePlainText(),
+      });
+    }
+
+    return NextResponse.json({ error: msg || "Erreur" }, { status: 502 });
   }
 }

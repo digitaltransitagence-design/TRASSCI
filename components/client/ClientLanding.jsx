@@ -159,7 +159,12 @@ export default function ClientLanding() {
         return;
       }
       if (j.mode === "stub" && j.guide) {
-        showToast("Copiez le guide affiché ci-dessous (e-mail non configuré).", "success");
+        showToast(
+          j.reason === "resend_sandbox" && j.message
+            ? j.message
+            : "Copiez le guide affiché ci-dessous (e-mail non configuré).",
+          j.reason === "resend_sandbox" ? "error" : "success"
+        );
       } else {
         showToast("Guide envoyé sur votre boîte e-mail.", "success");
       }

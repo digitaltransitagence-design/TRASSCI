@@ -1,10 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Package } from "lucide-react";
 
 /**
- * Pied de page global — marque, copyright, liens secondaires.
+ * Pied de page global — masqué sur /admin (portail plein écran).
  */
 export default function Footer() {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/admin")) return null;
+
   return (
     <footer className="border-t border-slate-800 bg-slate-900 text-slate-400">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 py-10 text-center sm:flex-row sm:text-left">

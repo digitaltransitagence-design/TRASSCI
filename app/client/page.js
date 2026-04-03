@@ -1,8 +1,21 @@
-/** Placeholder — espace client (étape 5). */
+import { Suspense } from "react";
+import ClientWorkspace from "@/components/client/ClientWorkspace";
+
+export const metadata = {
+  title: "Espace client | Trass CI",
+  description: "Créer un envoi et suivre vos colis.",
+};
+
 export default function ClientPage() {
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <p className="text-center text-slate-600">Espace client — à venir (étape 5).</p>
-    </div>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center text-slate-600">
+          Chargement…
+        </div>
+      }
+    >
+      <ClientWorkspace />
+    </Suspense>
   );
 }

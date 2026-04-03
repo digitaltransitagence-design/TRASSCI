@@ -15,6 +15,7 @@ const navLinks = [
  */
 export default function Navbar() {
   const pathname = usePathname();
+  if (pathname?.startsWith("/admin")) return null;
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">

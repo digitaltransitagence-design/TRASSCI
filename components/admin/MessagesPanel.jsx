@@ -88,9 +88,8 @@ export default function MessagesPanel({ packages = [] }) {
   return (
     <div className="mx-auto max-w-4xl space-y-8 animate-fade-in">
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-        Les notes sont stockées en base (table <code className="rounded bg-white px-1">admin_notes</code>
-        ). Exécutez <code className="rounded bg-white px-1">sql/migration_v3_features.sql</code> si besoin.
-        Même code admin que pour les règles tarifaires.
+        Notes en base (<code className="rounded bg-white px-1">admin_notes</code>) — même code admin
+        que les règles. Si erreur « table / relation » : migration V3 déjà exécutée côté Insforge ?
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

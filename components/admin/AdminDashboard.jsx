@@ -76,6 +76,8 @@ export default function AdminDashboard() {
   const [partners, setPartners] = useState([]);
   const [coursiers, setCoursiers] = useState([]);
   const [apiDown, setApiDown] = useState(false);
+  /** Erreur API autre que 503 (ex. table absente, 401 Insforge) */
+  const [loadError, setLoadError] = useState(null);
   const [aiReport, setAiReport] = useState(null);
   const [loadingReport, setLoadingReport] = useState(false);
   const [trafficById, setTrafficById] = useState({});
@@ -90,9 +92,16 @@ export default function AdminDashboard() {
       ]);
       if (pr.status === 503) {
         setApiDown(true);
+        setLoadError(null);
         return;
       }
       setApiDown(false);
+      if (!pr.ok) {
+        const err = await pr.json().catch(() => ({}));
+        setLoadError(err.error || `Erreur colis (${pr.status})`);
+        return;
+      }
+      setLoadError(null);
       const pj = await pr.json();
       setPackages(pj.packages || []);
       if (pa.ok) {
@@ -104,6 +113,7 @@ export default function AdminDashboard() {
         setCoursiers(c.coursiers || []);
       }
     } catch {
+      setLoadError("Réseau ou serveur injoignable.");
       showToast("Erreur chargement données.", "error");
     }
   }, [showToast]);
@@ -573,12 +583,34 @@ export default function AdminDashboard() {
 
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">
           {apiDown && (
-            <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-              Configurez Insforge (variables d&apos;environnement) et importez{" "}
-              <code className="rounded bg-white px-1">sql/schema.sql</code> (et{" "}
-              <code className="rounded bg-white px-1">migration_v2_rules.sql</code> puis{" "}
-              <code className="rounded bg-white px-1">migration_v3_features.sql</code> si
-              base déjà créée).
+            <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+              <strong className="block text-amber-950">Connexion Insforge (503)</strong>
+              <p className="mt-2">
+                Ce message <strong>n&apos;est pas résolu</strong> en exécutant seulement du SQL.
+                Le <strong>serveur</strong> (ex. Vercel) doit avoir{" "}
+                <code className="rounded bg-white px-1">INSFORGE_API_URL</code> et{" "}
+                <code className="rounded bg-white px-1">INSFORGE_API_KEY</code> (clé{" "}
+                <em>API Key</em> <code className="rounded bg-white px-1">ik_…</code>, pas la
+                Anon Key JWT). Redéployez après modification des variables.
+              </p>
+              <p className="mt-2 text-xs text-amber-900/90">
+                Les fichiers SQL ne servent qu&apos;à créer les tables dans Insforge une fois la
+                connexion OK.
+              </p>
+            </div>
+          )}
+
+          {loadError && !apiDown && (
+            <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950">
+              <strong className="block">Erreur chargement données</strong>
+              <p className="mt-2 font-mono text-xs break-words">{loadError}</p>
+              <p className="mt-2 text-xs text-red-900/90">
+                Si le message parle d&apos;une <strong>table</strong> ou <strong>relation</strong>{" "}
+                manquante, exécutez dans Insforge :{" "}
+                <code className="rounded bg-white px-1">sql/schema.sql</code> ou les migrations{" "}
+                <code className="rounded bg-white px-1">migration_v2_rules.sql</code>,{" "}
+                <code className="rounded bg-white px-1">migration_v3_features.sql</code>.
+              </p>
             </div>
           )}
 

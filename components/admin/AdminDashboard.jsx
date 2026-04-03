@@ -13,13 +13,36 @@ import {
   Sparkles,
   AlertTriangle,
   Settings,
+  LayoutDashboard,
+  Users,
+  MessageSquare,
+  ListChecks,
+  CalendarDays,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import RulesPanel from "@/components/admin/RulesPanel";
+import PartnersAdminPanel from "@/components/admin/PartnersAdminPanel";
+import MessagesPanel from "@/components/admin/MessagesPanel";
+import DeliveryStatusPanel from "@/components/admin/DeliveryStatusPanel";
+import ShippingCalendarPanel from "@/components/admin/ShippingCalendarPanel";
 import { useToast } from "@/components/providers/ToastProvider";
 
 const STORAGE_ROLE = "trass_admin_role";
 const DEMO_AGENT_PARTNER = "P-SBTA";
+
+const TAB_TITLES = {
+  dispatch: "Dispatch coursiers",
+  hub: "Centre de tri",
+  rules: "Règles & tarifs",
+  ai_dashboard: "Tableau IA",
+  admin_overview: "Administration — vue d’ensemble",
+  partners_admin: "Partenaires",
+  messages: "Messages & alertes",
+  delivery_status: "Statut de livraison",
+  calendar: "Calendrier des envois",
+  gare_ops: "Embarquement",
+  gare_delivery: "Remise client",
+};
 
 async function patchPackage(id, body) {
   const res = await fetch(`/api/packages/${encodeURIComponent(id)}`, {
@@ -366,6 +389,69 @@ export default function AdminDashboard() {
                 Règles & tarifs
               </button>
               <p className="mb-2 ml-2 mt-6 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Administration
+              </p>
+              <button
+                type="button"
+                onClick={() => setTab("admin_overview")}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                  tab === "admin_overview"
+                    ? "bg-slate-700 text-white"
+                    : "text-slate-400 hover:bg-slate-800"
+                }`}
+              >
+                <LayoutDashboard className="h-5 w-5" />
+                Vue d’ensemble
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("partners_admin")}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                  tab === "partners_admin"
+                    ? "bg-emerald-800 text-white"
+                    : "text-slate-400 hover:bg-slate-800"
+                }`}
+              >
+                <Users className="h-5 w-5" />
+                Partenaires
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("messages")}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                  tab === "messages"
+                    ? "bg-cyan-800 text-white"
+                    : "text-slate-400 hover:bg-slate-800"
+                }`}
+              >
+                <MessageSquare className="h-5 w-5" />
+                Messages
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("delivery_status")}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                  tab === "delivery_status"
+                    ? "bg-amber-800 text-white"
+                    : "text-slate-400 hover:bg-slate-800"
+                }`}
+              >
+                <ListChecks className="h-5 w-5" />
+                Statut livraison
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("calendar")}
+                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all ${
+                  tab === "calendar"
+                    ? "bg-orange-800 text-white"
+                    : "text-slate-400 hover:bg-slate-800"
+                }`}
+              >
+                <CalendarDays className="h-5 w-5" />
+                Calendrier envois
+              </button>
+              <p className="mb-2 ml-2 mt-6 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 IA
               </p>
               <button
@@ -424,8 +510,8 @@ export default function AdminDashboard() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="z-10 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white p-6">
-          <h2 className="text-2xl font-extrabold capitalize tracking-tight text-slate-800">
-            {tab.replace(/_/g, " ")}
+          <h2 className="text-2xl font-extrabold tracking-tight text-slate-800">
+            {TAB_TITLES[tab] || tab.replace(/_/g, " ")}
           </h2>
           {role === "SUPER_ADMIN" && (
             <div className="flex flex-wrap gap-4">
@@ -458,6 +544,99 @@ export default function AdminDashboard() {
           )}
 
           {role === "SUPER_ADMIN" && tab === "rules" && <RulesPanel />}
+
+          {role === "SUPER_ADMIN" && tab === "admin_overview" && (
+            <div className="mx-auto max-w-5xl animate-fade-in">
+              <p className="mb-8 text-slate-600">
+                Accès rapide aux modules de gestion Trass CI.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  {
+                    key: "partners_admin",
+                    title: "Partenaires",
+                    desc: "Gares, contacts, WhatsApp, conditions",
+                    icon: Users,
+                    color: "border-emerald-200 bg-emerald-50 text-emerald-900",
+                  },
+                  {
+                    key: "messages",
+                    title: "Messages",
+                    desc: "Notes internes et incidents colis",
+                    icon: MessageSquare,
+                    color: "border-cyan-200 bg-cyan-50 text-cyan-900",
+                  },
+                  {
+                    key: "delivery_status",
+                    title: "Statut de livraison",
+                    desc: "Tous les colis et filtres par étape",
+                    icon: ListChecks,
+                    color: "border-amber-200 bg-amber-50 text-amber-900",
+                  },
+                  {
+                    key: "calendar",
+                    title: "Calendrier d’envois",
+                    desc: "Volume par jour (date de création)",
+                    icon: CalendarDays,
+                    color: "border-orange-200 bg-orange-50 text-orange-900",
+                  },
+                  {
+                    key: "rules",
+                    title: "Règles & tarifs",
+                    desc: "Frais fixes et destinations",
+                    icon: Settings,
+                    color: "border-teal-200 bg-teal-50 text-teal-900",
+                  },
+                  {
+                    key: "ai_dashboard",
+                    title: "Tableau IA",
+                    desc: "Rapport stratégique Gemini",
+                    icon: BarChart3,
+                    color: "border-indigo-200 bg-indigo-50 text-indigo-900",
+                  },
+                ].map((card) => (
+                  <button
+                    key={card.key}
+                    type="button"
+                    onClick={() => setTab(card.key)}
+                    className={`flex flex-col items-start rounded-2xl border-2 p-6 text-left shadow-sm transition hover:shadow-md ${card.color}`}
+                  >
+                    <card.icon className="mb-3 h-8 w-8 opacity-90" />
+                    <span className="text-lg font-extrabold">{card.title}</span>
+                    <span className="mt-1 text-sm opacity-90">{card.desc}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-10 grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:grid-cols-3">
+                <div>
+                  <p className="text-xs font-bold uppercase text-slate-500">Colis total</p>
+                  <p className="text-2xl font-extrabold text-slate-800">{stats.total}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase text-slate-500">En attente</p>
+                  <p className="text-2xl font-extrabold text-orange-600">{stats.pending}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase text-slate-500">Incidents</p>
+                  <p className="text-2xl font-extrabold text-red-600">{stats.incidents}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {role === "SUPER_ADMIN" && tab === "partners_admin" && <PartnersAdminPanel />}
+
+          {role === "SUPER_ADMIN" && tab === "messages" && (
+            <MessagesPanel packages={packages} />
+          )}
+
+          {role === "SUPER_ADMIN" && tab === "delivery_status" && (
+            <DeliveryStatusPanel packages={packages} />
+          )}
+
+          {role === "SUPER_ADMIN" && tab === "calendar" && (
+            <ShippingCalendarPanel packages={packages} />
+          )}
 
           {role === "SUPER_ADMIN" && tab === "ai_dashboard" && (
             <div className="mx-auto max-w-5xl space-y-6 animate-fade-in">
